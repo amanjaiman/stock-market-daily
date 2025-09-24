@@ -1,0 +1,49 @@
+@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+:root {
+  --mint-green: #10b981;
+  --coral: #f97316;
+  --sunny-yellow: #fbbf24;
+  --sky-blue: #0ea5e9;
+  --soft-purple: #8b5cf6;
+  --off-white: #fefefe;
+  --game-gray: #374151;
+  --light-gray: #f3f4f6;
+}
+
+* {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    sans-serif;
+}
+
+.bounce-click {
+  transition: transform 0.15s ease-in-out;
+}
+
+.bounce-click:active {
+  transform: scale(0.95);
+}
+
+.card-shadow {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.floating-button {
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease-in-out;
+}
+
+.floating-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.2);
+}
+
+.game-tile {
+  transition: all 0.2s ease-in-out;
+}
+
+.game-tile:hover {
+  transform: translateY(-1px);
+}
