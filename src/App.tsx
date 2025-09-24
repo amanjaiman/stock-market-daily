@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
+import GameModal from "./components/GameModal";
+import Timer from "./components/Timer";
+import CountdownOverlay from "./components/CountdownOverlay";
 
 interface StockData {
   price: number;
@@ -7,77 +10,65 @@ interface StockData {
   percentChange: number;
 }
 
+type GameState = "pre-game" | "countdown" | "active" | "ended";
+
 function App() {
-  const [cash, setCash] = useState(10000); // Starting with $10,000
+  const [cash, setCash] = useState(5000); // Starting with $5,000
   const [shares, setShares] = useState(0);
   const [stockData, setStockData] = useState<StockData>({
-    price: 500,
+    price: 300,
     change: 0,
     percentChange: 0,
   });
-  const [priceHistory, setPriceHistory] = useState<number[]>([500]);
+  const [priceHistory, setPriceHistory] = useState<number[]>([300]);
   const [averageBuyPrice, setAverageBuyPrice] = useState(0); // Lifetime average
   const [totalSharesBought, setTotalSharesBought] = useState(0); // Lifetime total
   const [currentHoldingsAvgPrice, setCurrentHoldingsAvgPrice] = useState(0); // Current holdings average
   const [isRising, setIsRising] = useState(true);
-  const [momentum, setMomentum] = useState(1); // signed momentum [-10, 10]
-  const previousPrice = useRef(500);
+  // Replace momentum with trendStrength
+  const [trendStrength, setTrendStrength] = useState(1);
+  const previousPrice = useRef(300);
 
   // Developer Mode States
   const [isDevModeOpen, setIsDevModeOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
+  // Game State Management
+  const [gameState, setGameState] = useState<GameState>("pre-game");
+  const [timeRemaining, setTimeRemaining] = useState(90);
+  const [targetValue] = useState(7500);
+  const [countdownValue, setCountdownValue] = useState(3);
+
   const generatePriceChange = useCallback(() => {
-    // Decide whether to continue current direction (70%) or flip
-    const continueDirection = Math.random() < 0.7;
-
-    let nextIsRising = isRising;
-    if (!continueDirection) {
-      nextIsRising = !isRising;
-    }
-
-    // Update signed momentum toward the chosen direction
-    const dirSign = nextIsRising ? 1 : -1;
-    const changedDirection = nextIsRising !== isRising;
-    const maxMomentum = 5;
-    const rampStep = 1;
-    const changeBoostStep = 3; // larger delta when direction changes
-    const step = changedDirection ? changeBoostStep : rampStep;
-    const nextMomentum = Math.max(
-      -maxMomentum,
-      Math.min(maxMomentum, momentum + dirSign * step)
-    );
-
-    // Base move and randomness
-    const baseUnit = 2.5;
-    const volatility = 2.5;
+    // Simulate realistic market movements with trend persistence
+    const baseChange = isRising ? 2.5 : -2.5;
+    const volatility = 2.5; // $2.50 volatility range
     const randomChange = (Math.random() - 0.5) * volatility;
 
-    // Resistance when momentum opposes the chosen direction; growth when aligned
-    const trendMultiplier = Math.max(0, 1 + dirSign * nextMomentum * 0.1);
+    // Trend persistence: 70% chance to continue current trend
+    if (Math.random() < 0.7) {
+      setTrendStrength((prev) => Math.min(prev + 1, 10));
+    } else {
+      setTrendStrength((prev) => Math.max(prev - 2, 0));
+      setIsRising(!isRising);
+    }
 
-    const baseChangeSigned = dirSign * baseUnit;
-    const finalChange = Math.max(
-      -5,
-      Math.min(5, baseChangeSigned * trendMultiplier + randomChange)
-    );
+    // Apply trend strength multiplier (stronger trends move more)
+    const trendMultiplier = 1 + trendStrength * 0.1;
+    const finalChange = (baseChange + randomChange) * trendMultiplier;
 
-    // Commit state for next tick
-    setIsRising(nextIsRising);
-    setMomentum(nextMomentum);
-
-    return finalChange;
-  }, [isRising, momentum]);
+    return Math.max(-10, Math.min(10, finalChange)); // Limit change to $10 max
+  }, [isRising, trendStrength]);
 
   // Update stock price 5 times per second
   useEffect(() => {
-    if (isPaused) return; // Don't update when paused
+    if (isPaused || gameState !== "active") return; // Don't update when paused or game not active
 
     const updateStockPrice = () => {
       setStockData((prevData) => {
         const currentPrice = prevData.price;
         const change = generatePriceChange();
-        const newPrice = Math.max(50, currentPrice + change); // Minimum price of $50
+        const newPrice = Math.max(100, currentPrice + change); // Minimum price of $100
 
         const dollarChange = newPrice - previousPrice.current;
         const percentChange =
@@ -96,7 +87,7 @@ function App() {
 
     const interval = setInterval(updateStockPrice, 200); // 200ms = 5 times per second
     return () => clearInterval(interval);
-  }, [generatePriceChange, isPaused]);
+  }, [generatePriceChange, isPaused, gameState]);
 
   // Update previous price reference when price changes
   useEffect(() => {
@@ -107,8 +98,46 @@ function App() {
     return () => clearTimeout(timer);
   }, [stockData.price]);
 
+  // Game timer countdown
+  useEffect(() => {
+    if (gameState === "active" && timeRemaining > 0) {
+      const timer = setInterval(() => {
+        setTimeRemaining((prev) => {
+          const newTime = prev - 1;
+          if (newTime <= 0) {
+            setGameState("ended");
+            return 0;
+          }
+          return newTime;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [gameState, timeRemaining]);
+
+  // Countdown sequence (3-2-1)
+  useEffect(() => {
+    if (gameState === "countdown") {
+      if (countdownValue > 0) {
+        const timer = setTimeout(() => {
+          setCountdownValue((prev) => prev - 1);
+        }, 1000);
+        return () => clearTimeout(timer);
+      } else {
+        // Start the game
+        setGameState("active");
+        setCountdownValue(3); // Reset for next time
+      }
+    }
+  }, [gameState, countdownValue]);
+
+  const startGame = () => {
+    setGameState("countdown");
+  };
+
   const buyStock = () => {
-    if (cash >= stockData.price) {
+    if (gameState === "active" && cash >= stockData.price) {
       setCash((prev) => prev - stockData.price);
       setShares((prev) => prev + 1);
 
@@ -130,7 +159,7 @@ function App() {
   };
 
   const sellStock = () => {
-    if (shares > 0) {
+    if (gameState === "active" && shares > 0) {
       setCash((prev) => prev + stockData.price);
       setShares((prev) => {
         const newShares = prev - 1;
@@ -232,18 +261,28 @@ function App() {
         {/* Combined Market Price and Chart Section */}
         <div className="bg-white rounded-3xl card-shadow p-8 mb-8 game-tile">
           {/* Header */}
-          <div className="flex items-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl flex items-center justify-center mr-4 card-shadow">
-              <span className="text-white font-black text-xl">M</span>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl flex items-center justify-center mr-4 card-shadow">
+                <span className="text-white font-black text-xl">M</span>
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-gray-700">
+                  Market Index
+                </h2>
+                <p className="text-base text-gray-500 font-semibold">
+                  Simulated Stock Market
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-3xl font-black text-gray-700">
-                Market Index
-              </h2>
-              <p className="text-base text-gray-500 font-semibold">
-                Simulated Stock Market
-              </p>
-            </div>
+            {(gameState === "active" || gameState === "ended") && (
+              <Timer
+                timeRemaining={timeRemaining}
+                currentValue={totalValue}
+                targetValue={targetValue}
+                formatCurrency={formatCurrency}
+              />
+            )}
           </div>
 
           {/* Price Display - Full Width */}
@@ -495,8 +534,18 @@ function App() {
         <div className="flex gap-6 mb-8">
           <button
             onClick={buyStock}
-            disabled={cash < stockData.price}
-            className="flex items-center justify-center gap-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-6 px-12 rounded-3xl floating-button bounce-click flex-1"
+            disabled={
+              gameState === "pre-game" ||
+              gameState === "ended" ||
+              cash < stockData.price
+            }
+            className={`flex items-center justify-center gap-4 font-bold py-6 px-12 rounded-3xl floating-button bounce-click flex-1 transition-all duration-200 ${
+              gameState === "countdown"
+                ? "bg-emerald-400 hover:bg-emerald-500 text-white cursor-pointer"
+                : gameState === "active" && cash >= stockData.price
+                ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+                : "bg-gray-300 cursor-not-allowed text-gray-500"
+            }`}
           >
             <span className="text-3xl font-black">+</span>
             <div className="text-left">
@@ -510,8 +559,16 @@ function App() {
           </button>
           <button
             onClick={sellStock}
-            disabled={shares === 0}
-            className="flex items-center justify-center gap-4 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-200 disabled:cursor-not-allowed text-white disabled:text-gray-400 font-bold py-6 px-12 rounded-3xl floating-button bounce-click flex-1"
+            disabled={
+              gameState === "pre-game" || gameState === "ended" || shares === 0
+            }
+            className={`flex items-center justify-center gap-4 font-bold py-6 px-12 rounded-3xl floating-button bounce-click flex-1 transition-all duration-200 ${
+              gameState === "countdown"
+                ? "bg-orange-400 hover:bg-orange-500 text-white cursor-pointer"
+                : gameState === "active" && shares > 0
+                ? "bg-orange-500 hover:bg-orange-600 text-white"
+                : "bg-gray-300 cursor-not-allowed text-gray-500"
+            }`}
           >
             <span className="text-3xl font-black">−</span>
             <div className="text-left">
@@ -525,9 +582,22 @@ function App() {
 
         {/* Portfolio Information Card */}
         <div className="bg-white rounded-3xl card-shadow p-8 game-tile">
-          <h3 className="text-2xl font-bold text-gray-700 mb-6">
-            Portfolio Summary
-          </h3>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-bold text-gray-700">
+              Portfolio Summary
+            </h3>
+            {gameState === "ended" && (
+              <div
+                className={`px-4 py-2 rounded-full font-bold text-sm ${
+                  totalValue >= targetValue
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
+                {totalValue >= targetValue ? "🎉 You Won!" : "💸 You Lost"}
+              </div>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="bg-slate-50 rounded-2xl p-6">
@@ -539,11 +609,11 @@ function App() {
               </p>
               <p
                 className={`text-lg font-bold mt-2 ${
-                  totalValue >= 10000 ? "text-emerald-500" : "text-orange-500"
+                  totalValue >= 5000 ? "text-emerald-500" : "text-orange-500"
                 }`}
               >
-                {formatChange(totalValue - 10000)} (
-                {(((totalValue - 10000) / 10000) * 100).toFixed(2)}%)
+                {formatChange(totalValue - 5000)} (
+                {(((totalValue - 5000) / 5000) * 100).toFixed(2)}%)
               </p>
             </div>
 
@@ -596,6 +666,28 @@ function App() {
           )}
         </div>
       </div>
+
+      {/* Game Modal */}
+      {gameState === "pre-game" && (
+        <GameModal
+          startingCash={5000}
+          startingStockPrice={300}
+          targetValue={targetValue}
+          onStart={startGame}
+        />
+      )}
+
+      {/* Countdown Overlay */}
+      {gameState === "countdown" && (
+        <CountdownOverlay countdownValue={countdownValue} />
+      )}
+
+      {/* Blur overlay when not active */}
+      <div
+        className={`fixed inset-0 transition-all duration-300 pointer-events-none ${
+          gameState === "pre-game" ? "backdrop-blur-sm" : ""
+        }`}
+      />
 
       {/* Developer Mode Toggle */}
       <div className="fixed bottom-4 right-4 z-50">
