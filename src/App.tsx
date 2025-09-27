@@ -1,8 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
 import GameModal from "./components/GameModal";
-import Timer from "./components/Timer";
 import CountdownOverlay from "./components/CountdownOverlay";
+import DeveloperMode from "./components/DeveloperMode";
+import EndGameModal from "./components/EndGameModal";
+import {
+  useDailyStock,
+  useDailyDateRange,
+  useStockPriceData,
+  useCondensedPriceData,
+  type StockSymbol,
+  type CondensedDataPoint,
+} from "./hooks";
+import {
+  calculateGameParameters,
+  calculateParPerformance,
+  type GameParameters,
+  type ParPerformance,
+} from "./utils/gameCalculations";
 
 interface StockData {
   price: number;
@@ -13,21 +28,59 @@ interface StockData {
 type GameState = "pre-game" | "countdown" | "active" | "ended";
 
 function App() {
-  const [cash, setCash] = useState(5000); // Starting with $5,000
-  const [shares, setShares] = useState(0);
+  // Hook instances for real data
+  const { dailyStock } = useDailyStock();
+  const { dailyDateRange } = useDailyDateRange();
+
+  // Debug initial hook loading
+  useEffect(() => {
+    console.log("Hook loading status:", {
+      dailyStock,
+      dailyDateRange,
+      timestamp: new Date().toISOString(),
+    });
+  }, [dailyStock, dailyDateRange]);
+  const {
+    rawPrices,
+    fetchPriceData,
+    isLoading: priceDataLoading,
+  } = useStockPriceData();
+  const {
+    condensedData,
+    condenseData,
+    isLoading: condensedDataLoading,
+  } = useCondensedPriceData();
+
+  // Real stock data state
+  const [currentStock, setCurrentStock] = useState<StockSymbol | null>(null);
+  const [gameData, setGameData] = useState<CondensedDataPoint[]>([]);
+  const [currentDataIndex, setCurrentDataIndex] = useState(0);
+  const [isDataReady, setIsDataReady] = useState(false);
+
+  const [gameParameters, setGameParameters] = useState<GameParameters>({
+    startingCash: 5000,
+    startingShares: 0,
+    targetValue: 6500,
+    initialStockPrice: 300,
+    targetReturnPercentage: 30,
+  });
+  const [parPerformance, setParPerformance] = useState<ParPerformance | null>(
+    null
+  );
+  const [cash, setCash] = useState(gameParameters.startingCash);
+  const [shares, setShares] = useState(gameParameters.startingShares);
   const [stockData, setStockData] = useState<StockData>({
-    price: 300,
+    price: gameParameters.initialStockPrice,
     change: 0,
     percentChange: 0,
   });
-  const [priceHistory, setPriceHistory] = useState<number[]>([300]);
+  const [priceHistory, setPriceHistory] = useState<number[]>([
+    gameParameters.initialStockPrice,
+  ]);
   const [averageBuyPrice, setAverageBuyPrice] = useState(0); // Lifetime average
   const [totalSharesBought, setTotalSharesBought] = useState(0); // Lifetime total
   const [currentHoldingsAvgPrice, setCurrentHoldingsAvgPrice] = useState(0); // Current holdings average
-  const [isRising, setIsRising] = useState(true);
-  // Replace momentum with trendStrength
-  const [trendStrength, setTrendStrength] = useState(1);
-  const previousPrice = useRef(300);
+  const previousPrice = useRef(gameParameters.initialStockPrice);
 
   // Developer Mode States
   const [isDevModeOpen, setIsDevModeOpen] = useState(false);
@@ -35,59 +88,140 @@ function App() {
 
   // Game State Management
   const [gameState, setGameState] = useState<GameState>("pre-game");
-  const [timeRemaining, setTimeRemaining] = useState(90);
-  const [targetValue] = useState(7500);
+  const [timeRemaining, setTimeRemaining] = useState(60);
   const [countdownValue, setCountdownValue] = useState(3);
+  const [showEndGameModal, setShowEndGameModal] = useState(false);
 
-  const generatePriceChange = useCallback(() => {
-    // Simulate realistic market movements with trend persistence
-    const baseChange = isRising ? 2.5 : -2.5;
-    const volatility = 2.5; // $2.50 volatility range
-    const randomChange = (Math.random() - 0.5) * volatility;
+  // Initialize game data from daily stock and date range
+  const initializeGameData = useCallback(async () => {
+    if (!dailyStock || !dailyDateRange) return;
 
-    // Trend persistence: 70% chance to continue current trend
-    if (Math.random() < 0.7) {
-      setTrendStrength((prev) => Math.min(prev + 1, 10));
-    } else {
-      setTrendStrength((prev) => Math.max(prev - 2, 0));
-      setIsRising(!isRising);
+    try {
+      console.log("Initializing game data for:", dailyStock.symbol);
+      setCurrentStock(dailyStock);
+      setIsDataReady(false);
+
+      // Fetch raw price data
+      await fetchPriceData(
+        dailyStock.symbol,
+        dailyDateRange.startDate,
+        dailyDateRange.endDate
+      );
+    } catch (error) {
+      console.error("Error initializing game data:", error);
     }
+  }, [dailyStock, dailyDateRange, fetchPriceData]);
 
-    // Apply trend strength multiplier (stronger trends move more)
-    const trendMultiplier = 1 + trendStrength * 0.1;
-    const finalChange = (baseChange + randomChange) * trendMultiplier;
-
-    return Math.max(-10, Math.min(10, finalChange)); // Limit change to $10 max
-  }, [isRising, trendStrength]);
-
-  // Update stock price 5 times per second
+  // Auto-condense data when raw price data becomes available
   useEffect(() => {
-    if (isPaused || gameState !== "active") return; // Don't update when paused or game not active
+    console.log("Raw prices update:", {
+      rawPricesLength: rawPrices.length,
+      condensedDataLength: condensedData.length,
+      currentStock: currentStock?.symbol,
+      isDataReady,
+    });
+
+    if (rawPrices.length > 0 && condensedData.length === 0) {
+      console.log(
+        "Raw price data available, condensing...",
+        rawPrices.length,
+        "points"
+      );
+      condenseData(rawPrices);
+    }
+  }, [
+    rawPrices,
+    condensedData.length,
+    condenseData,
+    currentStock?.symbol,
+    isDataReady,
+  ]);
+
+  // Prepare condensed data when it becomes available
+  useEffect(() => {
+    if (condensedData.length > 0) {
+      console.log("Condensed data ready:", condensedData.length, "points");
+      setGameData([...condensedData]);
+      setCurrentDataIndex(0);
+
+      // Calculate dynamic game parameters based on the stock data
+      const calculatedParams = calculateGameParameters(condensedData);
+      console.log("Calculated game parameters:", calculatedParams);
+      setGameParameters(calculatedParams);
+
+      // Calculate par performance for comparison
+      const parPerf = calculateParPerformance(condensedData, calculatedParams);
+      console.log("Par performance:", parPerf);
+      setParPerformance(parPerf);
+
+      // Reset game state with new parameters
+      setCash(calculatedParams.startingCash);
+      setShares(calculatedParams.startingShares);
+      setAverageBuyPrice(0);
+      setTotalSharesBought(0);
+      setCurrentHoldingsAvgPrice(0);
+
+      // Set initial stock price from the first data point
+      setStockData({
+        price: condensedData[0].price,
+        change: 0,
+        percentChange: 0,
+      });
+      setPriceHistory([condensedData[0].price]);
+      previousPrice.current = condensedData[0].price;
+
+      setIsDataReady(true);
+    }
+  }, [condensedData]);
+
+  // Update stock price 5 times per second using condensed data
+  useEffect(() => {
+    if (
+      isPaused ||
+      gameState !== "active" ||
+      !isDataReady ||
+      gameData.length === 0
+    )
+      return;
 
     const updateStockPrice = () => {
-      setStockData((prevData) => {
-        const currentPrice = prevData.price;
-        const change = generatePriceChange();
-        const newPrice = Math.max(100, currentPrice + change); // Minimum price of $100
+      setCurrentDataIndex((prevIndex) => {
+        const nextIndex = prevIndex + 1;
 
-        const dollarChange = newPrice - previousPrice.current;
-        const percentChange =
-          ((newPrice - previousPrice.current) / previousPrice.current) * 100;
+        // Check if we've reached the end of the data
+        if (nextIndex >= gameData.length) {
+          return prevIndex; // Stay at the last index
+        }
 
-        // Update price history (keep last 100 points for trend analysis)
-        setPriceHistory((prev) => [...prev.slice(-99), newPrice]);
+        const currentPoint = gameData[nextIndex];
+        const previousPoint = gameData[prevIndex];
 
-        return {
-          price: newPrice,
-          change: dollarChange,
-          percentChange: percentChange,
-        };
+        if (currentPoint) {
+          const dollarChange = currentPoint.price - previousPoint.price;
+          const percentChange =
+            previousPoint.price !== 0
+              ? ((currentPoint.price - previousPoint.price) /
+                  previousPoint.price) *
+                100
+              : 0;
+
+          setStockData({
+            price: currentPoint.price,
+            change: dollarChange,
+            percentChange: percentChange,
+          });
+
+          // Update price history (keep last 100 points for trend analysis)
+          setPriceHistory((prev) => [...prev.slice(-99), currentPoint.price]);
+        }
+
+        return nextIndex;
       });
     };
 
     const interval = setInterval(updateStockPrice, 200); // 200ms = 5 times per second
     return () => clearInterval(interval);
-  }, [generatePriceChange, isPaused, gameState]);
+  }, [isPaused, gameState, isDataReady, gameData]);
 
   // Update previous price reference when price changes
   useEffect(() => {
@@ -106,6 +240,7 @@ function App() {
           const newTime = prev - 1;
           if (newTime <= 0) {
             setGameState("ended");
+            setShowEndGameModal(true);
             return 0;
           }
           return newTime;
@@ -132,37 +267,137 @@ function App() {
     }
   }, [gameState, countdownValue]);
 
-  const startGame = () => {
-    setGameState("countdown");
+  const startGame = async () => {
+    try {
+      // Initialize data if not ready
+      if (!isDataReady) {
+        console.log("Data not ready, initializing...");
+        await initializeGameData();
+        // Wait a bit for data to be processed, then start
+        setTimeout(() => {
+          if (gameData.length > 0) {
+            setCurrentDataIndex(0);
+            setTimeRemaining(60);
+            setGameState("countdown");
+          } else {
+            console.warn("Data still not ready after initialization");
+          }
+        }, 500);
+        return;
+      }
+
+      // Reset game state and start
+      setCurrentDataIndex(0);
+      setTimeRemaining(60);
+      setGameState("countdown");
+    } catch (error) {
+      console.error("Error starting game:", error);
+    }
   };
 
-  const buyStock = () => {
-    if (gameState === "active" && cash >= stockData.price) {
-      setCash((prev) => prev - stockData.price);
-      setShares((prev) => prev + 1);
+  // Data is ready but don't auto-start - wait for user to click Start
+  useEffect(() => {
+    if (isDataReady && gameState === "pre-game") {
+      console.log("Data is ready, waiting for user to start game");
+      // Don't auto-start anymore - user must click the Start button
+    }
+  }, [isDataReady, gameState]);
+
+  // Initialize data on component mount
+  useEffect(() => {
+    console.log("Initialization check:", {
+      dailyStock: dailyStock?.symbol,
+      dailyDateRange: dailyDateRange
+        ? `${dailyDateRange.startDate} to ${dailyDateRange.endDate}`
+        : null,
+      isDataReady,
+      currentStock: currentStock?.symbol,
+    });
+
+    if (dailyStock && dailyDateRange && !isDataReady) {
+      console.log("Starting initialization...");
+      initializeGameData();
+    }
+  }, [
+    dailyStock,
+    dailyDateRange,
+    isDataReady,
+    initializeGameData,
+    currentStock?.symbol,
+  ]);
+
+  // Fallback initialization after 3 seconds if hooks haven't loaded
+  useEffect(() => {
+    const fallbackTimer = setTimeout(() => {
+      if (!dailyStock || !dailyDateRange) {
+        console.warn("Daily hooks not loaded, using fallback data");
+        // Create fallback stock and date range
+        const fallbackStock: StockSymbol = {
+          symbol: "AAPL",
+          name: "Apple Inc.",
+          sector: "Technology",
+        };
+        setCurrentStock(fallbackStock);
+        // Simulate successful data loading with fallback
+        const fallbackData = Array.from({ length: 450 }, (_, i) => ({
+          timestamp: i,
+          price: 150 + Math.sin(i / 50) * 20 + (Math.random() - 0.5) * 10,
+          volume: Math.floor(1000000 + Math.random() * 5000000),
+        }));
+
+        setGameData(fallbackData);
+        setIsDataReady(true);
+        setStockData({
+          price: fallbackData[0].price,
+          change: 0,
+          percentChange: 0,
+        });
+        setPriceHistory([fallbackData[0].price]);
+      }
+    }, 3000);
+
+    return () => clearTimeout(fallbackTimer);
+  }, [dailyStock, dailyDateRange]);
+
+  // Debug: Log current progress through data
+  useEffect(() => {
+    if (gameState === "active" && gameData.length > 0) {
+      const progress = ((currentDataIndex / gameData.length) * 100).toFixed(1);
+      console.log(
+        `Game progress: ${progress}% (${currentDataIndex}/${gameData.length})`
+      );
+    }
+  }, [currentDataIndex, gameData.length, gameState]);
+
+  const buyStock = (quantity: number = 1) => {
+    const totalCost = stockData.price * quantity;
+    if (gameState === "active" && cash >= totalCost && quantity > 0) {
+      setCash((prev) => prev - totalCost);
+      setShares((prev) => prev + quantity);
 
       // Update lifetime average buy price
-      const newTotalCost =
-        averageBuyPrice * totalSharesBought + stockData.price;
-      const newTotalShares = totalSharesBought + 1;
+      const newTotalCost = averageBuyPrice * totalSharesBought + totalCost;
+      const newTotalShares = totalSharesBought + quantity;
       setAverageBuyPrice(newTotalCost / newTotalShares);
       setTotalSharesBought(newTotalShares);
 
       // Update current holdings average buy price
       const newCurrentHoldingsCost =
-        currentHoldingsAvgPrice * shares + stockData.price;
-      const newCurrentHoldingsShares = shares + 1;
+        currentHoldingsAvgPrice * shares + totalCost;
+      const newCurrentHoldingsShares = shares + quantity;
       setCurrentHoldingsAvgPrice(
         newCurrentHoldingsCost / newCurrentHoldingsShares
       );
     }
   };
 
-  const sellStock = () => {
-    if (gameState === "active" && shares > 0) {
-      setCash((prev) => prev + stockData.price);
+  const sellStock = (quantity: number = 1) => {
+    const actualQuantity = Math.min(quantity, shares);
+    if (gameState === "active" && shares > 0 && actualQuantity > 0) {
+      const totalRevenue = stockData.price * actualQuantity;
+      setCash((prev) => prev + totalRevenue);
       setShares((prev) => {
-        const newShares = prev - 1;
+        const newShares = prev - actualQuantity;
         // If selling all shares, reset current holdings average
         if (newShares === 0) {
           setCurrentHoldingsAvgPrice(0);
@@ -174,6 +409,9 @@ function App() {
 
   const portfolioValue = shares * stockData.price;
   const totalValue = cash + portfolioValue;
+
+  // Determine if we should blur stock details (only during active gameplay)
+  const shouldBlurStockDetails = gameState === "active";
 
   // Calculate price range for last 50 updates (10 seconds)
   const recentPrices = priceHistory.slice(-50);
@@ -258,30 +496,31 @@ function App() {
     >
       {/* Single Vertical Panel */}
       <div className="max-w-4xl mx-auto p-8">
-        {/* Combined Market Price and Chart Section */}
+        {/* Chart Section */}
         <div className="bg-white rounded-3xl card-shadow p-8 mb-8 game-tile">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl flex items-center justify-center mr-4 card-shadow">
-                <span className="text-white font-black text-xl">M</span>
-              </div>
-              <div>
-                <h2 className="text-3xl font-black text-gray-700">
-                  Market Index
-                </h2>
-                <p className="text-base text-gray-500 font-semibold">
-                  Simulated Stock Market
-                </p>
-              </div>
-            </div>
-            {(gameState === "active" || gameState === "ended") && (
-              <Timer
-                timeRemaining={timeRemaining}
-                currentValue={totalValue}
-                targetValue={targetValue}
-                formatCurrency={formatCurrency}
-              />
+          <div className="mb-6">
+            <h3 className="text-2xl font-bold text-gray-700">
+              {shouldBlurStockDetails
+                ? `Category: ${currentStock?.sector || "Mystery"}`
+                : `${currentStock?.symbol || "Stock"} - ${
+                    currentStock?.name || "Live Price Chart"
+                  }`}
+              {gameState === "ended" && currentStock?.symbol && (
+                <span className="text-lg font-semibold text-gray-500 ml-2">
+                  ({currentStock.symbol})
+                </span>
+              )}
+            </h3>
+            {dailyDateRange && (
+              <p className="text-sm text-gray-500 font-medium">
+                {shouldBlurStockDetails
+                  ? `${new Date(
+                      dailyDateRange.startDate
+                    ).getFullYear()} - ${new Date(
+                      dailyDateRange.endDate
+                    ).getFullYear()} Period`
+                  : `${dailyDateRange.startDate} to ${dailyDateRange.endDate}`}
+              </p>
             )}
           </div>
 
@@ -346,13 +585,42 @@ function App() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-base text-gray-500">
-                  <span className="font-bold">10s Range:</span>{" "}
-                  <span className="font-semibold">
-                    {formatCurrency(priceRange.min)} -{" "}
-                    {formatCurrency(priceRange.max)}
-                  </span>
-                </div>
+                {/* Timer Display */}
+                {(gameState === "active" || gameState === "ended") && (
+                  <div className="flex items-center justify-end gap-2">
+                    <svg
+                      className={`w-6 h-6 ${
+                        timeRemaining > 30
+                          ? "text-emerald-500"
+                          : timeRemaining > 10
+                          ? "text-yellow-500"
+                          : "text-red-500 animate-pulse"
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span
+                      className={`text-2xl font-black ${
+                        timeRemaining > 30
+                          ? "text-emerald-500"
+                          : timeRemaining > 10
+                          ? "text-yellow-500"
+                          : "text-red-500 animate-pulse"
+                      }`}
+                    >
+                      {Math.floor(timeRemaining / 60)}:
+                      {(timeRemaining % 60).toString().padStart(2, "0")}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -514,7 +782,14 @@ function App() {
                 )}
               </svg>
             </div>
-            <div className="flex justify-end text-base text-gray-500 font-semibold mt-6">
+            <div className="flex justify-between text-base text-gray-500 font-semibold mt-6">
+              <span className="text-gray-500">
+                <span className="font-bold">10s Range:</span>{" "}
+                <span className="font-semibold">
+                  {formatCurrency(priceRange.min)} -{" "}
+                  {formatCurrency(priceRange.max)}
+                </span>
+              </span>
               <div className="flex gap-6">
                 {shares > 0 && (
                   <span className="flex items-center gap-2">
@@ -530,54 +805,221 @@ function App() {
           </div>
         </div>
 
-        {/* Large Buy/Sell Buttons */}
+        {/* Buy/Sell Button Groups */}
         <div className="flex gap-6 mb-8">
-          <button
-            onClick={buyStock}
-            disabled={
-              gameState === "pre-game" ||
-              gameState === "ended" ||
-              cash < stockData.price
-            }
-            className={`flex items-center justify-center gap-4 font-bold py-6 px-12 rounded-3xl floating-button bounce-click flex-1 transition-all duration-200 ${
-              gameState === "countdown"
-                ? "bg-emerald-400 hover:bg-emerald-500 text-white cursor-pointer"
-                : gameState === "active" && cash >= stockData.price
-                ? "bg-emerald-500 hover:bg-emerald-600 text-white"
-                : "bg-gray-300 cursor-not-allowed text-gray-500"
-            }`}
-          >
-            <span className="text-3xl font-black">+</span>
-            <div className="text-left">
-              <div className="text-2xl font-black">BUY</div>
-              <div className="text-sm opacity-90">
-                {cash < stockData.price
-                  ? "Insufficient funds"
-                  : `${formatCurrency(stockData.price)} per share`}
+          {/* Buy Buttons */}
+          <div className="flex gap-2 flex-1">
+            <button
+              onClick={() => buyStock(1)}
+              disabled={
+                gameState === "pre-game" ||
+                gameState === "ended" ||
+                cash < stockData.price
+              }
+              className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
+                gameState === "countdown"
+                  ? "bg-emerald-400 hover:bg-emerald-500 text-white cursor-pointer"
+                  : gameState === "active" && cash >= stockData.price
+                  ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+                  : "bg-gray-300 cursor-not-allowed text-gray-500"
+              }`}
+            >
+              <span className="text-xl font-black">+</span>
+              <div className="text-center">
+                <div className="text-lg font-black">BUY 1</div>
+                <div className="text-xs opacity-90">
+                  {formatCurrency(stockData.price)}
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => buyStock(5)}
+              disabled={
+                gameState === "pre-game" ||
+                gameState === "ended" ||
+                cash < stockData.price * 5
+              }
+              className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
+                gameState === "countdown"
+                  ? "bg-emerald-500 hover:bg-emerald-600 text-white cursor-pointer"
+                  : gameState === "active" && cash >= stockData.price * 5
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  : "bg-gray-300 cursor-not-allowed text-gray-500"
+              }`}
+            >
+              <span className="text-xl font-black">+</span>
+              <div className="text-center">
+                <div className="text-lg font-black">BUY 5</div>
+                <div className="text-xs opacity-90">
+                  {formatCurrency(stockData.price * 5)}
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => buyStock(Math.floor(cash / stockData.price))}
+              disabled={
+                gameState === "pre-game" ||
+                gameState === "ended" ||
+                cash < stockData.price ||
+                Math.floor(cash / stockData.price) === 0
+              }
+              className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
+                gameState === "countdown"
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                  : gameState === "active" &&
+                    cash >= stockData.price &&
+                    Math.floor(cash / stockData.price) > 0
+                  ? "bg-emerald-700 hover:bg-emerald-800 text-white"
+                  : "bg-gray-300 cursor-not-allowed text-gray-500"
+              }`}
+            >
+              <span className="text-xl font-black">+</span>
+              <div className="text-center">
+                <div className="text-lg font-black">MAX</div>
+                <div className="text-xs opacity-90">
+                  {Math.floor(cash / stockData.price)} shares
+                </div>
+              </div>
+            </button>
+          </div>
+
+          {/* Sell Buttons */}
+          <div className="flex gap-2 flex-1">
+            <button
+              onClick={() => sellStock(1)}
+              disabled={
+                gameState === "pre-game" ||
+                gameState === "ended" ||
+                shares === 0
+              }
+              className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
+                gameState === "countdown"
+                  ? "bg-orange-400 hover:bg-orange-500 text-white cursor-pointer"
+                  : gameState === "active" && shares > 0
+                  ? "bg-orange-500 hover:bg-orange-600 text-white"
+                  : "bg-gray-300 cursor-not-allowed text-gray-500"
+              }`}
+            >
+              <span className="text-xl font-black">−</span>
+              <div className="text-center">
+                <div className="text-lg font-black">SELL 1</div>
+                <div className="text-xs opacity-90">
+                  {formatCurrency(stockData.price)}
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => sellStock(5)}
+              disabled={
+                gameState === "pre-game" || gameState === "ended" || shares < 5
+              }
+              className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
+                gameState === "countdown"
+                  ? "bg-orange-500 hover:bg-orange-600 text-white cursor-pointer"
+                  : gameState === "active" && shares >= 5
+                  ? "bg-orange-600 hover:bg-orange-700 text-white"
+                  : "bg-gray-300 cursor-not-allowed text-gray-500"
+              }`}
+            >
+              <span className="text-xl font-black">−</span>
+              <div className="text-center">
+                <div className="text-lg font-black">SELL 5</div>
+                <div className="text-xs opacity-90">
+                  {formatCurrency(stockData.price * 5)}
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => sellStock(shares)}
+              disabled={
+                gameState === "pre-game" ||
+                gameState === "ended" ||
+                shares === 0
+              }
+              className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
+                gameState === "countdown"
+                  ? "bg-orange-600 hover:bg-orange-700 text-white cursor-pointer"
+                  : gameState === "active" && shares > 0
+                  ? "bg-orange-700 hover:bg-orange-800 text-white"
+                  : "bg-gray-300 cursor-not-allowed text-gray-500"
+              }`}
+            >
+              <span className="text-xl font-black">−</span>
+              <div className="text-center">
+                <div className="text-lg font-black">ALL</div>
+                <div className="text-xs opacity-90">{shares} shares</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Game State Information Card */}
+        <div className="bg-white rounded-3xl card-shadow p-8 mb-8 game-tile">
+          {/* Game Status */}
+          <div className="mb-6">
+            {/* Full Width Portfolio Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs text-gray-500">
+                <span className="text-sm font-semibold text-gray-500">
+                  Need:{" "}
+                  {formatCurrency(
+                    Math.max(0, gameParameters.targetValue - totalValue)
+                  )}
+                </span>
+                <span>
+                  {Math.min(
+                    (totalValue / gameParameters.targetValue) * 100,
+                    100
+                  ).toFixed(1)}
+                  %
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div
+                  className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-3 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${Math.min(
+                      (totalValue / gameParameters.targetValue) * 100,
+                      100
+                    )}%`,
+                  }}
+                ></div>
               </div>
             </div>
-          </button>
-          <button
-            onClick={sellStock}
-            disabled={
-              gameState === "pre-game" || gameState === "ended" || shares === 0
-            }
-            className={`flex items-center justify-center gap-4 font-bold py-6 px-12 rounded-3xl floating-button bounce-click flex-1 transition-all duration-200 ${
-              gameState === "countdown"
-                ? "bg-orange-400 hover:bg-orange-500 text-white cursor-pointer"
-                : gameState === "active" && shares > 0
-                ? "bg-orange-500 hover:bg-orange-600 text-white"
-                : "bg-gray-300 cursor-not-allowed text-gray-500"
-            }`}
-          >
-            <span className="text-3xl font-black">−</span>
-            <div className="text-left">
-              <div className="text-2xl font-black">SELL</div>
-              <div className="text-sm opacity-90">
-                {shares === 0 ? "No shares to sell" : `${shares} shares owned`}
-              </div>
+          </div>
+
+          {/* Game Target Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            <div className="text-center">
+              <p className="text-sm font-semibold text-gray-500 mb-1">
+                Current Value
+              </p>
+              <p
+                className={`text-2xl font-black ${
+                  totalValue >= gameParameters.targetValue
+                    ? "text-emerald-600"
+                    : totalValue >= gameParameters.startingCash
+                    ? "text-blue-600"
+                    : "text-orange-600"
+                }`}
+              >
+                {formatCurrency(totalValue)}
+              </p>
             </div>
-          </button>
+
+            <div className="text-center">
+              <p className="text-sm font-semibold text-gray-500 mb-1">
+                Target Value
+              </p>
+              <p className="text-2xl font-black text-emerald-600">
+                {formatCurrency(gameParameters.targetValue)}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Portfolio Information Card */}
@@ -588,58 +1030,19 @@ function App() {
             </h3>
             {gameState === "ended" && (
               <div
-                className={`px-4 py-2 rounded-full font-bold text-sm ${
-                  totalValue >= targetValue
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-red-100 text-red-700"
+                className={`px-4 py-2 rounded-full font-bold text-sm cursor-pointer hover:scale-105 transition-transform duration-200 ${
+                  totalValue >= gameParameters.targetValue
+                    ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                    : "bg-red-100 text-red-700 hover:bg-red-200"
                 }`}
+                onClick={() => setShowEndGameModal(true)}
+                title="Click to view detailed results"
               >
-                {totalValue >= targetValue ? "🎉 You Won!" : "💸 You Lost"}
+                {totalValue >= gameParameters.targetValue
+                  ? "🎉 You Won!"
+                  : "💸 You Lost"}
               </div>
             )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="bg-slate-50 rounded-2xl p-6">
-              <p className="text-sm font-semibold text-gray-500 mb-2">
-                Total Portfolio Value
-              </p>
-              <p className="text-3xl font-black text-gray-700">
-                {formatCurrency(totalValue)}
-              </p>
-              <p
-                className={`text-lg font-bold mt-2 ${
-                  totalValue >= 5000 ? "text-emerald-500" : "text-orange-500"
-                }`}
-              >
-                {formatChange(totalValue - 5000)} (
-                {(((totalValue - 5000) / 5000) * 100).toFixed(2)}%)
-              </p>
-            </div>
-
-            <div className="bg-slate-50 rounded-2xl p-6">
-              <p className="text-sm font-semibold text-gray-500 mb-2">
-                Available Cash
-              </p>
-              <p className="text-3xl font-black text-gray-700">
-                {formatCurrency(cash)}
-              </p>
-              <p className="text-sm text-gray-500 mt-2">
-                Can buy {Math.floor(cash / stockData.price)} shares
-              </p>
-            </div>
-
-            <div className="bg-slate-50 rounded-2xl p-6">
-              <p className="text-sm font-semibold text-gray-500 mb-2">
-                Stock Holdings
-              </p>
-              <p className="text-3xl font-black text-gray-700">
-                {formatCurrency(portfolioValue)}
-              </p>
-              <p className="text-sm text-gray-500 mt-2">
-                {shares} shares owned
-              </p>
-            </div>
           </div>
 
           {totalSharesBought > 0 && (
@@ -670,16 +1073,53 @@ function App() {
       {/* Game Modal */}
       {gameState === "pre-game" && (
         <GameModal
-          startingCash={5000}
-          startingStockPrice={300}
-          targetValue={targetValue}
+          startingCash={gameParameters.startingCash}
+          startingStockPrice={gameParameters.initialStockPrice}
+          targetValue={gameParameters.targetValue}
+          targetReturnPercentage={gameParameters.targetReturnPercentage}
           onStart={startGame}
+          isLoading={priceDataLoading || condensedDataLoading || !isDataReady}
+          loadingText={
+            priceDataLoading
+              ? "Fetching market data..."
+              : condensedDataLoading
+              ? "Processing game data..."
+              : !isDataReady
+              ? "Preparing daily challenge..."
+              : undefined
+          }
+          stockInfo={currentStock}
+          dateRange={dailyDateRange}
         />
       )}
 
       {/* Countdown Overlay */}
       {gameState === "countdown" && (
         <CountdownOverlay countdownValue={countdownValue} />
+      )}
+
+      {/* End Game Modal */}
+      {showEndGameModal && currentStock && dailyDateRange && parPerformance && (
+        <EndGameModal
+          isWinner={totalValue >= gameParameters.targetValue}
+          stockInfo={currentStock}
+          dateRange={dailyDateRange}
+          gameParameters={gameParameters}
+          parPerformance={parPerformance}
+          playerStats={{
+            finalValue: totalValue,
+            averageBuyPrice,
+            totalSharesBought,
+            cash,
+            shares,
+            currentStockPrice: stockData.price,
+          }}
+          onClose={() => {
+            setShowEndGameModal(false);
+            // Keep game in ended state so user can see final results
+          }}
+          formatCurrency={formatCurrency}
+        />
       )}
 
       {/* Blur overlay when not active */}
@@ -689,9 +1129,9 @@ function App() {
         }`}
       />
 
-      {/* Developer Mode Toggle */}
-      <div className="fixed bottom-4 right-4 z-50">
-        {!isDevModeOpen ? (
+      {/* Developer Mode */}
+      {!isDevModeOpen ? (
+        <div className="fixed bottom-4 right-4 z-50">
           <button
             onClick={() => setIsDevModeOpen(true)}
             className="bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-105"
@@ -712,86 +1152,15 @@ function App() {
               />
             </svg>
           </button>
-        ) : (
-          <div className="bg-gray-800 text-white rounded-lg shadow-xl p-4 min-w-[200px]">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                  />
-                </svg>
-                <span className="text-sm font-bold">Dev Mode</span>
-              </div>
-              <button
-                onClick={() => setIsDevModeOpen(false)}
-                className="text-gray-400 hover:text-white transition-colors p-1"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsPaused(!isPaused)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  isPaused
-                    ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                    : "bg-orange-600 hover:bg-orange-700 text-white"
-                }`}
-              >
-                {isPaused ? (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                    Play
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                    </svg>
-                    Pause
-                  </>
-                )}
-              </button>
-
-              <div className="text-xs text-gray-400">
-                {isPaused ? "Market Paused" : "Market Live"}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <DeveloperMode
+          isOpen={isDevModeOpen}
+          onClose={() => setIsDevModeOpen(false)}
+          isPaused={isPaused}
+          onTogglePause={() => setIsPaused(!isPaused)}
+        />
+      )}
     </div>
   );
 }

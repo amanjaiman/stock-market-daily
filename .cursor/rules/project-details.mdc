@@ -1,0 +1,17 @@
+---
+alwaysApply: true
+---
+
+# Tradle - stock market daily game
+
+## What is this game
+
+Tradle is a fast-paced stock market trading game where players have some number of seconds to grow their portfolio from a starting configuration (starting portfolio value and starting shares) to a certain value by buying and selling shares of a stock. Players must time their trades carefully to capitalize on price movements and reach the target value before time runs out.
+
+Tradle is "daily game" (similar to Wordle, Connections, etc.) so the challenge is different each day.
+
+Each day, we will pick a top 300 stock (so that most people know the company) and we will pick a date range (min 1 year and max 5 years, anytime between 2012 and 2025). This sets up the daily challenge. From here, we will set a reasonable starting portfolio value and starting number of shares (it can be zero too), and set the target portfolio value that we want the player to achieve to win.
+
+We will take the REAL price data of the stock in the selected date range and condense it so it can be traversed in 90 seconds. This way, when the game starts, the user has 90 seconds to buy and sell shares to reach the target portfolio value.
+
+We will track the total amount earned, and the lifetime shares bought. These will be used in the public leaderboard and used to share if the user won or not.
