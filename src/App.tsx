@@ -1,20 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./App.css";
 import GameModal from "./components/GameModal";
 import CountdownOverlay from "./components/CountdownOverlay";
 import DeveloperMode from "./components/DeveloperMode";
 import EndGameModal from "./components/EndGameModal";
+import { useDailyChallenge } from "./hooks";
+import type { CondensedDataPoint } from "./hooks/types";
 import {
-  useDailyStock,
-  useDailyDateRange,
-  useStockPriceData,
-  useCondensedPriceData,
-  type StockSymbol,
-  type CondensedDataPoint,
-} from "./hooks";
-import {
-  calculateGameParameters,
-  calculateParPerformance,
   type GameParameters,
   type ParPerformance,
 } from "./utils/gameCalculations";
@@ -28,22 +20,19 @@ interface StockData {
 type GameState = "pre-game" | "countdown" | "active" | "ended";
 
 function App() {
-  // Hook instances for real data
-  const { dailyStock } = useDailyStock();
-  const { dailyDateRange } = useDailyDateRange();
+  // Hook for daily challenge data from Supabase
   const {
-    rawPrices,
-    fetchPriceData,
-    isLoading: priceDataLoading,
-  } = useStockPriceData();
-  const {
-    condensedData,
-    condenseData,
-    isLoading: condensedDataLoading,
-  } = useCondensedPriceData();
+    challenge,
+    isLoading: challengeLoading,
+    error: challengeError,
+  } = useDailyChallenge();
 
   // Real stock data state
-  const [currentStock, setCurrentStock] = useState<StockSymbol | null>(null);
+  const [currentStock, setCurrentStock] = useState<{
+    symbol: string;
+    name: string;
+    sector?: string;
+  } | null>(null);
   const [gameData, setGameData] = useState<CondensedDataPoint[]>([]);
   const [currentDataIndex, setCurrentDataIndex] = useState(0);
   const [isDataReady, setIsDataReady] = useState(false);
@@ -83,71 +72,81 @@ function App() {
   const [countdownValue, setCountdownValue] = useState(3);
   const [showEndGameModal, setShowEndGameModal] = useState(false);
 
-  // Initialize game data from daily stock and date range
-  const initializeGameData = useCallback(async () => {
-    if (!dailyStock || !dailyDateRange) return;
+  // Initialize game data from daily challenge
+  useEffect(() => {
+    if (!challenge) return;
 
     try {
-      setCurrentStock(dailyStock);
-      setIsDataReady(false);
+      // Set stock information
+      setCurrentStock({
+        symbol: challenge.tickerSymbol,
+        name: challenge.companyName,
+        sector: challenge.sector || undefined,
+      });
 
-      // Fetch raw price data
-      await fetchPriceData(
-        dailyStock.symbol,
-        dailyDateRange.startDate,
-        dailyDateRange.endDate
-      );
-    } catch (error) {
-      console.error("Error initializing game data:", error);
-    }
-  }, [dailyStock, dailyDateRange, fetchPriceData]);
-
-  // Auto-condense data when raw price data becomes available
-  useEffect(() => {
-    if (rawPrices.length > 0 && condensedData.length === 0) {
-      condenseData(rawPrices);
-    }
-  }, [
-    rawPrices,
-    condensedData.length,
-    condenseData,
-    currentStock?.symbol,
-    isDataReady,
-  ]);
-
-  // Prepare condensed data when it becomes available
-  useEffect(() => {
-    if (condensedData.length > 0) {
-      setGameData([...condensedData]);
+      // Set game data from challenge
+      setGameData([...challenge.priceData]);
       setCurrentDataIndex(0);
 
-      // Calculate dynamic game parameters based on the stock data
-      const calculatedParams = calculateGameParameters(condensedData);
-      setGameParameters(calculatedParams);
+      // Set game parameters from challenge
+      const gameParams: GameParameters = {
+        startingCash: challenge.startingCash,
+        startingShares: challenge.startingShares,
+        targetValue: challenge.targetValue,
+        initialStockPrice: challenge.initialStockPrice,
+        targetReturnPercentage: challenge.targetReturnPercentage,
+      };
+      setGameParameters(gameParams);
 
-      // Calculate par performance for comparison
-      const parPerf = calculateParPerformance(condensedData, calculatedParams);
+      // Set par performance from challenge
+      const parPerf: ParPerformance = {
+        parAverageBuyPrice: challenge.parAverageBuyPrice,
+        parTotalSharesBought: challenge.parTotalSharesBought,
+        parProfitPerTrade: challenge.parProfitPerTrade,
+        parFinalValue: challenge.parFinalValue,
+        parCashRemaining: challenge.parCashRemaining,
+        strategy: "balanced",
+        efficiency: challenge.parEfficiency,
+      };
       setParPerformance(parPerf);
 
       // Reset game state with new parameters
-      setCash(calculatedParams.startingCash);
-      setShares(calculatedParams.startingShares);
+      setCash(challenge.startingCash);
+      setShares(challenge.startingShares);
       setAverageBuyPrice(0);
       setTotalSharesBought(0);
       setCurrentHoldingsAvgPrice(0);
 
       // Set initial stock price from the first data point
-      setStockData({
-        price: condensedData[0].price,
-        change: 0,
-        percentChange: 0,
-      });
-      setPriceHistory([condensedData[0].price]);
-      previousPrice.current = condensedData[0].price;
+      if (challenge.priceData.length > 0) {
+        setStockData({
+          price: challenge.priceData[0].price,
+          change: 0,
+          percentChange: 0,
+        });
+        setPriceHistory([challenge.priceData[0].price]);
+        previousPrice.current = challenge.priceData[0].price;
+      }
 
       setIsDataReady(true);
+      console.log("Game data initialized from daily challenge:", {
+        stock: challenge.tickerSymbol,
+        company: challenge.companyName,
+        priceDataPoints: challenge.priceData.length,
+        startingCash: challenge.startingCash,
+        targetValue: challenge.targetValue,
+      });
+    } catch (error) {
+      console.error("Error initializing game data from challenge:", error);
     }
-  }, [condensedData]);
+  }, [challenge]);
+
+  // Debug log to use currentDataIndex for linter
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.debug("Current data index:", currentDataIndex);
+    }
+  }, [currentDataIndex]);
 
   // Update stock price 5 times per second using condensed data
   useEffect(() => {
@@ -242,78 +241,24 @@ function App() {
     }
   }, [gameState, countdownValue]);
 
-  const startGame = async () => {
-    try {
-      // Initialize data if not ready
-      if (!isDataReady) {
-        await initializeGameData();
-        // Wait a bit for data to be processed, then start
-        setTimeout(() => {
-          if (gameData.length > 0) {
-            setCurrentDataIndex(0);
-            setTimeRemaining(60);
-            setGameState("countdown");
-          } else {
-            console.warn("Data still not ready after initialization");
-          }
-        }, 500);
-        return;
-      }
-
-      // Reset game state and start
-      setCurrentDataIndex(0);
-      setTimeRemaining(60);
-      setGameState("countdown");
-    } catch (error) {
-      console.error("Error starting game:", error);
+  const startGame = () => {
+    if (!isDataReady || !challenge || gameData.length === 0) {
+      console.warn("Cannot start game: data not ready");
+      return;
     }
+
+    // Reset game state and start
+    setCurrentDataIndex(0);
+    setTimeRemaining(60); // 60 seconds as per game rules
+    setGameState("countdown");
   };
 
-  // Initialize data on component mount
+  // Show error state when challenge fails to load
   useEffect(() => {
-    if (dailyStock && dailyDateRange && !isDataReady) {
-      initializeGameData();
+    if (challengeError) {
+      console.error("Failed to load daily challenge:", challengeError);
     }
-  }, [
-    dailyStock,
-    dailyDateRange,
-    isDataReady,
-    initializeGameData,
-    currentStock?.symbol,
-  ]);
-
-  // Fallback initialization after 3 seconds if hooks haven't loaded
-  useEffect(() => {
-    const fallbackTimer = setTimeout(() => {
-      if (!dailyStock || !dailyDateRange) {
-        console.warn("Daily hooks not loaded, using fallback data");
-        // Create fallback stock and date range
-        const fallbackStock: StockSymbol = {
-          symbol: "AAPL",
-          name: "Apple Inc.",
-          sector: "Technology",
-        };
-        setCurrentStock(fallbackStock);
-        // Simulate successful data loading with fallback
-        const fallbackData = Array.from({ length: 450 }, (_, i) => ({
-          timestamp: i,
-          price: 150 + Math.sin(i / 50) * 20 + (Math.random() - 0.5) * 10,
-          volume: Math.floor(1000000 + Math.random() * 5000000),
-        }));
-
-        setGameData(fallbackData);
-        setIsDataReady(true);
-        setStockData({
-          price: fallbackData[0].price,
-          change: 0,
-          percentChange: 0,
-        });
-        setPriceHistory([fallbackData[0].price]);
-      }
-    }, 3000);
-
-    return () => clearTimeout(fallbackTimer);
-  }, [dailyStock, dailyDateRange]);
+  }, [challengeError]);
 
   const buyStock = (quantity: number = 1) => {
     const totalCost = stockData.price * quantity;
@@ -457,15 +402,11 @@ function App() {
                 </span>
               )}
             </h3>
-            {dailyDateRange && (
+            {challenge && (
               <p className="text-sm text-gray-500 font-medium">
                 {shouldBlurStockDetails
-                  ? `${new Date(
-                      dailyDateRange.startDate
-                    ).getFullYear()} - ${new Date(
-                      dailyDateRange.endDate
-                    ).getFullYear()} Period`
-                  : `${dailyDateRange.startDate} to ${dailyDateRange.endDate}`}
+                  ? `${challenge.startYear} - ${challenge.endYear} Period`
+                  : `${challenge.startDate} to ${challenge.endDate}`}
               </p>
             )}
           </div>
@@ -1024,18 +965,26 @@ function App() {
           targetValue={gameParameters.targetValue}
           targetReturnPercentage={gameParameters.targetReturnPercentage}
           onStart={startGame}
-          isLoading={priceDataLoading || condensedDataLoading || !isDataReady}
+          isLoading={challengeLoading || !isDataReady}
           loadingText={
-            priceDataLoading
-              ? "Fetching market data..."
-              : condensedDataLoading
-              ? "Processing game data..."
+            challengeLoading
+              ? "Loading daily challenge..."
               : !isDataReady
-              ? "Preparing daily challenge..."
+              ? "Preparing game data..."
+              : challengeError
+              ? "Failed to load challenge"
               : undefined
           }
           stockInfo={currentStock}
-          dateRange={dailyDateRange}
+          dateRange={
+            challenge
+              ? {
+                  startDate: challenge.startDate,
+                  endDate: challenge.endDate,
+                  days: challenge.tradingDays,
+                }
+              : null
+          }
         />
       )}
 
@@ -1045,11 +994,15 @@ function App() {
       )}
 
       {/* End Game Modal */}
-      {showEndGameModal && currentStock && dailyDateRange && parPerformance && (
+      {showEndGameModal && currentStock && challenge && parPerformance && (
         <EndGameModal
           isWinner={totalValue >= gameParameters.targetValue}
           stockInfo={currentStock}
-          dateRange={dailyDateRange}
+          dateRange={{
+            startDate: challenge.startDate,
+            endDate: challenge.endDate,
+            days: challenge.tradingDays,
+          }}
           gameParameters={gameParameters}
           parPerformance={parPerformance}
           playerStats={{

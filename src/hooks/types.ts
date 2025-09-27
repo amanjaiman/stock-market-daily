@@ -67,7 +67,7 @@ export interface UseCondensedPriceDataResult {
 }
 
 // API Configuration
-export interface AlphaVantageConfig {
+export interface TiingoConfig {
   apiKey: string;
   baseUrl: string;
   requestsPerMinute: number;

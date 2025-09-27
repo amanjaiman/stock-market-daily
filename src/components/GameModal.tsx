@@ -82,7 +82,7 @@ function GameModal({
                     Stock Price
                   </p>
                   <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(startingStockPrice)}
+                    ${startingStockPrice}
                   </p>
                 </div>
                 <div>

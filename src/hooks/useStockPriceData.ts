@@ -2,30 +2,27 @@ import { useState, useCallback } from "react";
 import type { RawStockPrice, UseStockPriceDataResult } from "./types";
 import { STORAGE_KEYS } from "./types";
 
-// Alpha Vantage API configuration
-const ALPHA_VANTAGE_API_KEY = "9RRJYXF3O5UPN70O";
-const ALPHA_VANTAGE_BASE_URL = "https://www.alphavantage.co/query";
+// Tiingo API configuration
+const TIINGO_API_KEY = "13cb874696a06cd1ea2f2bf36729629dd9543db5";
+const TIINGO_BASE_URL = "https://api.tiingo.com/tiingo/daily";
 
-// Rate limiting
-const RATE_LIMIT_DELAY = 12000; // 12 seconds between requests (5 requests per minute)
+// Rate limiting (Tiingo allows more requests than Alpha Vantage)
+const RATE_LIMIT_DELAY = 1000; // 1 second between requests
 
-interface AlphaVantageResponse {
-  "Meta Data": {
-    "1. Information": string;
-    "2. Symbol": string;
-    "3. Last Refreshed": string;
-    "4. Output Size": string;
-    "5. Time Zone": string;
-  };
-  "Time Series (Daily)": {
-    [date: string]: {
-      "1. open": string;
-      "2. high": string;
-      "3. low": string;
-      "4. close": string;
-      "5. volume": string;
-    };
-  };
+interface TiingoResponse {
+  date: string;
+  close: number;
+  high: number;
+  low: number;
+  open: number;
+  volume: number;
+  adjClose: number;
+  adjHigh: number;
+  adjLow: number;
+  adjOpen: number;
+  adjVolume: number;
+  divCash: number;
+  splitFactor: number;
 }
 
 export const useStockPriceData = (): UseStockPriceDataResult => {
@@ -82,12 +79,11 @@ export const useStockPriceData = (): UseStockPriceDataResult => {
           }
         }
 
-        // Make API request
-        const url = new URL(ALPHA_VANTAGE_BASE_URL);
-        url.searchParams.set("function", "TIME_SERIES_DAILY");
-        url.searchParams.set("symbol", symbol);
-        url.searchParams.set("apikey", ALPHA_VANTAGE_API_KEY);
-        url.searchParams.set("outputsize", "full"); // Get full history
+        // Make API request to Tiingo
+        const url = new URL(`${TIINGO_BASE_URL}/${symbol}/prices`);
+        url.searchParams.set("startDate", startDate);
+        url.searchParams.set("endDate", endDate);
+        url.searchParams.set("token", TIINGO_API_KEY);
 
         localStorage.setItem("last_api_request", Date.now().toString());
 
@@ -97,39 +93,24 @@ export const useStockPriceData = (): UseStockPriceDataResult => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data: AlphaVantageResponse = await response.json();
+        const data: TiingoResponse[] = await response.json();
 
         // Check for API errors
-        if (!data["Time Series (Daily)"]) {
+        if (!Array.isArray(data) || data.length === 0) {
           throw new Error("Invalid API response or symbol not found");
         }
 
-        // Parse and filter data by date range
-        const timeSeries = data["Time Series (Daily)"];
-        const prices: RawStockPrice[] = [];
+        // Transform Tiingo data to our RawStockPrice format
+        const prices: RawStockPrice[] = data.map((item) => ({
+          date: item.date.split('T')[0], // Convert ISO date to YYYY-MM-DD format
+          open: item.open,
+          high: item.high,
+          low: item.low,
+          close: item.close,
+          volume: item.volume,
+        }));
 
-        const startDateTime = new Date(startDate).getTime();
-        const endDateTime = new Date(endDate).getTime();
-
-        Object.entries(timeSeries).forEach(([date, values]) => {
-          const dateTime = new Date(date).getTime();
-
-          if (dateTime >= startDateTime && dateTime <= endDateTime) {
-            prices.push({
-              date,
-              open: parseFloat(values["1. open"]),
-              high: parseFloat(values["2. high"]),
-              low: parseFloat(values["3. low"]),
-              close: parseFloat(values["4. close"]),
-              volume: parseInt(values["5. volume"]),
-            });
-          }
-        });
-
-        // Sort by date (oldest first)
-        prices.sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
+        // Data is already sorted by date from Tiingo API (oldest first)
 
         // Validate we have sufficient data
         if (prices.length < 50) {
@@ -153,7 +134,7 @@ export const useStockPriceData = (): UseStockPriceDataResult => {
         // Use fallback data on error
         const fallbackData = generateFallbackData(symbol, startDate, endDate);
         setRawPrices(fallbackData);
-        setError(`API Error: Using simulated data for ${symbol}`);
+        setError(`Tiingo API Error: Using simulated data for ${symbol}`);
       } finally {
         setIsLoading(false);
       }

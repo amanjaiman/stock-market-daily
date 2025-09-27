@@ -7,6 +7,11 @@ export {
   addMarketRealism,
   clearCondensedDataCache,
 } from "./useCondensedPriceData";
+export { 
+  useDailyChallenge, 
+  useChallengeByDay,
+  type DailyChallenge 
+} from "./useDailyChallenge";
 
 // Export types
 export type {
@@ -19,7 +24,7 @@ export type {
   UseDateRangeResult,
   UseStockPriceDataResult,
   UseCondensedPriceDataResult,
-  AlphaVantageConfig,
+  TiingoConfig,
 } from "./types";
 
 export { STORAGE_KEYS } from "./types";
