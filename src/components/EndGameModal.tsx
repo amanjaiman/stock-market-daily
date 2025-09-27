@@ -34,6 +34,26 @@ function EndGameModal({
   const [copySuccess, setCopySuccess] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
 
+  // Calculate player's Profit Per Trade (PPT)
+  const playerProfitPerTrade =
+    playerStats.totalSharesBought > 0
+      ? (playerStats.finalValue - gameParameters.startingCash) /
+        playerStats.totalSharesBought
+      : 0;
+
+  // Debug PPT values
+  console.log("EndGameModal PPT Debug:", {
+    playerProfitPerTrade,
+    parProfitPerTrade: parPerformance.parProfitPerTrade,
+    playerStats: {
+      finalValue: playerStats.finalValue,
+      totalSharesBought: playerStats.totalSharesBought,
+    },
+    gameParameters: {
+      startingCash: gameParameters.startingCash,
+    },
+  });
+
   const generateShareText = (): string => {
     // Generate date-based game number (days since epoch)
     const today = new Date();
@@ -57,15 +77,16 @@ function EndGameModal({
       performanceEmojis.push("🟥"); // Worse than par
     }
 
-    // 2. Trading Activity vs Par (less trading is better)
+    // 2. Profit Per Trade vs Par (higher PPT is better)
     if (playerStats.totalSharesBought === 0) {
       performanceEmojis.push("⬛"); // Didn't trade
     } else if (
-      playerStats.totalSharesBought <= parPerformance.parTotalSharesBought
+      isNaN(parPerformance.parProfitPerTrade) ||
+      playerProfitPerTrade >= parPerformance.parProfitPerTrade
     ) {
-      performanceEmojis.push("🟩"); // Equal or less trading (better)
+      performanceEmojis.push("🟩"); // Better or equal PPT (or par is invalid)
     } else {
-      performanceEmojis.push("🟥"); // Overtraded compared to par
+      performanceEmojis.push("🟥"); // Worse PPT than par
     }
 
     // 3. Target Achievement
@@ -85,7 +106,11 @@ function EndGameModal({
     const shareText = `Tradle #${gameNumber} ${performanceEmojis.join("")}
 Final Value: ${formatCurrency(playerStats.finalValue)} (${
       returnPercent >= 0 ? "+" : ""
-    }${returnPercent.toFixed(1)}%)
+    }${returnPercent.toFixed(1)}%)${
+      playerStats.totalSharesBought > 0
+        ? `\nPPT: ${formatCurrency(playerProfitPerTrade)}`
+        : ""
+    }
 
 Play at tradle.game`;
 
@@ -176,13 +201,13 @@ Play at tradle.game`;
                 <div className="text-lg mb-1">
                   {playerStats.totalSharesBought === 0
                     ? "⬛"
-                    : playerStats.totalSharesBought <=
-                      parPerformance.parTotalSharesBought
+                    : isNaN(parPerformance.parProfitPerTrade) ||
+                      playerProfitPerTrade >= parPerformance.parProfitPerTrade
                     ? "🟩"
                     : "🟥"}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  Shares
+                  PPT
                 </div>
               </div>
               <div className="text-center">
@@ -307,7 +332,7 @@ Play at tradle.game`;
                                 : "text-orange-600 dark:text-orange-400"
                             }`}
                           >
-                            Your: {formatCurrency(playerStats.averageBuyPrice)}
+                            {formatCurrency(playerStats.averageBuyPrice)}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
                             Par:{" "}
@@ -317,21 +342,27 @@ Play at tradle.game`;
                       </div>
                       <div className="text-center">
                         <p className="text-gray-500 dark:text-gray-400 text-xs mb-2">
-                          Total Shares Bought
+                          Profit Per Trade
                         </p>
                         <div className="space-y-1">
                           <p
                             className={`font-medium text-sm ${
-                              playerStats.totalSharesBought <=
-                              parPerformance.parTotalSharesBought
+                              isNaN(parPerformance.parProfitPerTrade) ||
+                              playerProfitPerTrade >=
+                                parPerformance.parProfitPerTrade
                                 ? "text-emerald-600 dark:text-emerald-400"
                                 : "text-orange-600 dark:text-orange-400"
                             }`}
                           >
-                            Your: {playerStats.totalSharesBought}
+                            {formatCurrency(playerProfitPerTrade)}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Par: {parPerformance.parTotalSharesBought}
+                            Par:{" "}
+                            {isNaN(parPerformance.parProfitPerTrade)
+                              ? "$0.00"
+                              : formatCurrency(
+                                  parPerformance.parProfitPerTrade
+                                )}
                           </p>
                         </div>
                       </div>

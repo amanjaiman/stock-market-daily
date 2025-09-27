@@ -24,6 +24,7 @@ interface GameModalProps {
 }
 
 import { useState } from "react";
+import Tooltip from "./Tooltip";
 
 function GameModal({
   startingCash,
@@ -165,21 +166,30 @@ function GameModal({
               <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                 <li className="flex items-start gap-2">
                   <span className="w-2 h-2 bg-emerald-500 rounded-full mt-1.5"></span>
-                  You have <strong>60 seconds</strong> to trade shares
+                  <span>
+                    You have <strong>60 seconds</strong> to trade shares of a
+                    real stock
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-2 h-2 bg-emerald-500 rounded-full mt-1.5"></span>
-                  The stock price changes five times every second
+                  <span>The stock price changes five times every second</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-2 h-2 bg-emerald-500 rounded-full mt-1.5"></span>
-                  Reach the target portfolio value to win and climb the
-                  leaderboard
+                  <span>
+                    Reach the target portfolio value to win and climb the
+                    leaderboard
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full mt-1.5 "></span>
-                  Be below the par average buy price and par total shares bought
-                  for extra points
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full mt-1.5"></span>
+                  <span>
+                    Be below the par{" "}
+                    <Tooltip content="Average Buy Price">ABP</Tooltip> and par{" "}
+                    <Tooltip content="Price Per Trade">PPT</Tooltip> for extra
+                    points
+                  </span>
                 </li>
               </ul>
             </div>

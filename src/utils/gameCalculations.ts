@@ -10,7 +10,8 @@ export interface GameParameters {
 
 export interface ParPerformance {
   parAverageBuyPrice: number;
-  parTotalSharesBought: number;
+  parTotalSharesBought: number; // Keep for internal calculations
+  parProfitPerTrade: number; // (final value - starting value) / total shares bought
   parFinalValue: number;
   parCashRemaining: number;
   strategy: "balanced";
@@ -84,6 +85,7 @@ export const calculateParPerformance = (
     return {
       parAverageBuyPrice: gameParams.initialStockPrice,
       parTotalSharesBought: 0,
+      parProfitPerTrade: 0, // No trades made
       parFinalValue: gameParams.startingCash,
       parCashRemaining: gameParams.startingCash,
       strategy: "balanced",
@@ -185,9 +187,43 @@ export const calculateParPerformance = (
     )
   );
 
+  // Calculate Profit Per Trade (PPT)
+  console.log("PPT Debug:", {
+    parFinalValue,
+    startingCash: gameParams.startingCash,
+    totalSharesBought,
+    calculation: parFinalValue - gameParams.startingCash,
+  });
+
+  const parProfitPerTrade =
+    totalSharesBought > 0
+      ? (parFinalValue - gameParams.startingCash) / totalSharesBought
+      : 0;
+
+  // Safety check for NaN values
+  if (isNaN(parProfitPerTrade)) {
+    console.error("PPT calculation resulted in NaN!", {
+      parFinalValue,
+      startingCash: gameParams.startingCash,
+      totalSharesBought,
+    });
+    // Return 0 as fallback
+    const safeProfitPerTrade = 0;
+    return {
+      parAverageBuyPrice,
+      parTotalSharesBought: totalSharesBought,
+      parProfitPerTrade: safeProfitPerTrade,
+      parFinalValue,
+      parCashRemaining: cash,
+      strategy: "balanced",
+      efficiency,
+    };
+  }
+
   return {
     parAverageBuyPrice,
     parTotalSharesBought: totalSharesBought,
+    parProfitPerTrade,
     parFinalValue,
     parCashRemaining: cash,
     strategy: "balanced",
