@@ -187,14 +187,6 @@ export const calculateParPerformance = (
     )
   );
 
-  // Calculate Profit Per Trade (PPT)
-  console.log("PPT Debug:", {
-    parFinalValue,
-    startingCash: gameParams.startingCash,
-    totalSharesBought,
-    calculation: parFinalValue - gameParams.startingCash,
-  });
-
   const parProfitPerTrade =
     totalSharesBought > 0
       ? (parFinalValue - gameParams.startingCash) / totalSharesBought

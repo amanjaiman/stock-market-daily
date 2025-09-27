@@ -31,15 +31,6 @@ function App() {
   // Hook instances for real data
   const { dailyStock } = useDailyStock();
   const { dailyDateRange } = useDailyDateRange();
-
-  // Debug initial hook loading
-  useEffect(() => {
-    console.log("Hook loading status:", {
-      dailyStock,
-      dailyDateRange,
-      timestamp: new Date().toISOString(),
-    });
-  }, [dailyStock, dailyDateRange]);
   const {
     rawPrices,
     fetchPriceData,
@@ -97,7 +88,6 @@ function App() {
     if (!dailyStock || !dailyDateRange) return;
 
     try {
-      console.log("Initializing game data for:", dailyStock.symbol);
       setCurrentStock(dailyStock);
       setIsDataReady(false);
 
@@ -114,19 +104,7 @@ function App() {
 
   // Auto-condense data when raw price data becomes available
   useEffect(() => {
-    console.log("Raw prices update:", {
-      rawPricesLength: rawPrices.length,
-      condensedDataLength: condensedData.length,
-      currentStock: currentStock?.symbol,
-      isDataReady,
-    });
-
     if (rawPrices.length > 0 && condensedData.length === 0) {
-      console.log(
-        "Raw price data available, condensing...",
-        rawPrices.length,
-        "points"
-      );
       condenseData(rawPrices);
     }
   }, [
@@ -140,18 +118,15 @@ function App() {
   // Prepare condensed data when it becomes available
   useEffect(() => {
     if (condensedData.length > 0) {
-      console.log("Condensed data ready:", condensedData.length, "points");
       setGameData([...condensedData]);
       setCurrentDataIndex(0);
 
       // Calculate dynamic game parameters based on the stock data
       const calculatedParams = calculateGameParameters(condensedData);
-      console.log("Calculated game parameters:", calculatedParams);
       setGameParameters(calculatedParams);
 
       // Calculate par performance for comparison
       const parPerf = calculateParPerformance(condensedData, calculatedParams);
-      console.log("Par performance:", parPerf);
       setParPerformance(parPerf);
 
       // Reset game state with new parameters
@@ -271,7 +246,6 @@ function App() {
     try {
       // Initialize data if not ready
       if (!isDataReady) {
-        console.log("Data not ready, initializing...");
         await initializeGameData();
         // Wait a bit for data to be processed, then start
         setTimeout(() => {
@@ -295,27 +269,9 @@ function App() {
     }
   };
 
-  // Data is ready but don't auto-start - wait for user to click Start
-  useEffect(() => {
-    if (isDataReady && gameState === "pre-game") {
-      console.log("Data is ready, waiting for user to start game");
-      // Don't auto-start anymore - user must click the Start button
-    }
-  }, [isDataReady, gameState]);
-
   // Initialize data on component mount
   useEffect(() => {
-    console.log("Initialization check:", {
-      dailyStock: dailyStock?.symbol,
-      dailyDateRange: dailyDateRange
-        ? `${dailyDateRange.startDate} to ${dailyDateRange.endDate}`
-        : null,
-      isDataReady,
-      currentStock: currentStock?.symbol,
-    });
-
     if (dailyStock && dailyDateRange && !isDataReady) {
-      console.log("Starting initialization...");
       initializeGameData();
     }
   }, [
@@ -358,16 +314,6 @@ function App() {
 
     return () => clearTimeout(fallbackTimer);
   }, [dailyStock, dailyDateRange]);
-
-  // Debug: Log current progress through data
-  useEffect(() => {
-    if (gameState === "active" && gameData.length > 0) {
-      const progress = ((currentDataIndex / gameData.length) * 100).toFixed(1);
-      console.log(
-        `Game progress: ${progress}% (${currentDataIndex}/${gameData.length})`
-      );
-    }
-  }, [currentDataIndex, gameData.length, gameState]);
 
   const buyStock = (quantity: number = 1) => {
     const totalCost = stockData.price * quantity;

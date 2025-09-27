@@ -41,19 +41,6 @@ function EndGameModal({
         playerStats.totalSharesBought
       : 0;
 
-  // Debug PPT values
-  console.log("EndGameModal PPT Debug:", {
-    playerProfitPerTrade,
-    parProfitPerTrade: parPerformance.parProfitPerTrade,
-    playerStats: {
-      finalValue: playerStats.finalValue,
-      totalSharesBought: playerStats.totalSharesBought,
-    },
-    gameParameters: {
-      startingCash: gameParameters.startingCash,
-    },
-  });
-
   const generateShareText = (): string => {
     // Generate date-based game number (days since epoch)
     const today = new Date();
