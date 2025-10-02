@@ -1121,6 +1121,7 @@ function App() {
             setShowEndGameModal(false);
             // Keep game in ended state so user can see final results
           }}
+          onPlayAgain={playAgain}
           onLeaderboardClick={handleLeaderboardModalClick}
           formatCurrency={formatCurrency}
         />
