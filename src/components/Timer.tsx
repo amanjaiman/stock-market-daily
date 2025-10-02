@@ -16,7 +16,7 @@ function Timer({
 
   const timeColor =
     timeRemaining > 30
-      ? "text-emerald-500"
+      ? "text-green-500"
       : timeRemaining > 10
       ? "text-yellow-500"
       : "text-red-500 animate-pulse";
@@ -48,14 +48,14 @@ function Timer({
       {/* Portfolio Progress */}
       <div className="space-y-2">
         <div className="flex justify-between items-center text-sm">
-          <span className="text-gray-500 font-semibold">Current:</span>
-          <span className="font-black text-gray-700">
+          <span className="text-slate-500 font-semibold">Current:</span>
+          <span className="font-black text-slate-700">
             {formatCurrency(currentValue)}
           </span>
         </div>
 
         <div className="flex justify-between items-center text-sm">
-          <span className="text-gray-500 font-semibold">Need:</span>
+          <span className="text-slate-500 font-semibold">Need:</span>
           <span className="font-bold text-orange-600">
             {formatCurrency(remaining)}
           </span>
@@ -63,13 +63,13 @@ function Timer({
 
         {/* Progress Bar */}
         <div className="mt-2">
-          <div className="flex justify-between text-xs text-gray-400 mb-1">
+          <div className="flex justify-between text-xs text-slate-400 mb-1">
             <span>Progress to {formatCurrency(targetValue)}</span>
             <span>{progressPercent.toFixed(1)}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-slate-200 rounded-full h-2">
             <div
-              className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-2 rounded-full transition-all duration-300"
+              className="bg-gradient-to-r from-green-500 to-green-400 h-2 rounded-full transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
             ></div>
           </div>

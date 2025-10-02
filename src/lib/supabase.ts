@@ -33,6 +33,19 @@ export interface DailyChallengeRow {
   par_final_value: number;
   par_cash_remaining: number;
   par_efficiency: number;
-  price_data: any; // JSONB data
+  price_data: unknown; // JSONB data
   created_at?: string;
+}
+
+export interface LeaderboardRow {
+  id: string;
+  day: number;
+  name: string;
+  final_value: number;
+  percentage_change_of_value: number;
+  avg_buy: number;
+  ppt: number;
+  num_tries: number;
+  created_at: string;
+  updated_at: string;
 }

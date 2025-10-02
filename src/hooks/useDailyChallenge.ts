@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, type DailyChallengeRow } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import type { CondensedDataPoint } from './types';
 
 export interface DailyChallenge {

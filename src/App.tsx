@@ -2,14 +2,23 @@ import { useState, useEffect, useRef } from "react";
 import "./App.css";
 import GameModal from "./components/GameModal";
 import CountdownOverlay from "./components/CountdownOverlay";
-import DeveloperMode from "./components/DeveloperMode";
 import EndGameModal from "./components/EndGameModal";
+import LeaderboardModal from "./components/LeaderboardModal";
+import Header from "./components/Header";
 import { useDailyChallenge } from "./hooks";
 import type { CondensedDataPoint } from "./hooks/types";
 import {
   type GameParameters,
   type ParPerformance,
 } from "./utils/gameCalculations";
+import {
+  formatDateRangeForDisplay,
+  formatDateRangeForBlurred,
+} from "./utils/dateUtils";
+import {
+  saveLeaderboardEntry,
+  getEntryForDay,
+} from "./utils/leaderboardStorage";
 
 interface StockData {
   price: number;
@@ -61,16 +70,16 @@ function App() {
   const [totalSharesBought, setTotalSharesBought] = useState(0); // Lifetime total
   const [currentHoldingsAvgPrice, setCurrentHoldingsAvgPrice] = useState(0); // Current holdings average
   const previousPrice = useRef(gameParameters.initialStockPrice);
-
-  // Developer Mode States
-  const [isDevModeOpen, setIsDevModeOpen] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
+  const hasGameEndedSaved = useRef(false); // Track if we've saved results for current game
 
   // Game State Management
   const [gameState, setGameState] = useState<GameState>("pre-game");
   const [timeRemaining, setTimeRemaining] = useState(60);
-  const [countdownValue, setCountdownValue] = useState(3);
+  const [countdownValue, setCountdownValue] = useState(5);
   const [showEndGameModal, setShowEndGameModal] = useState(false);
+  const [isModalClosing, setIsModalClosing] = useState(false);
+  const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
+  const [hasPlayedToday, setHasPlayedToday] = useState(false);
 
   // Initialize game data from daily challenge
   useEffect(() => {
@@ -136,6 +145,10 @@ function App() {
         startingCash: challenge.startingCash,
         targetValue: challenge.targetValue,
       });
+
+      // Check if user has already played today
+      const todayEntry = getEntryForDay(challenge.day);
+      setHasPlayedToday(todayEntry !== null);
     } catch (error) {
       console.error("Error initializing game data from challenge:", error);
     }
@@ -150,13 +163,7 @@ function App() {
 
   // Update stock price 5 times per second using condensed data
   useEffect(() => {
-    if (
-      isPaused ||
-      gameState !== "active" ||
-      !isDataReady ||
-      gameData.length === 0
-    )
-      return;
+    if (gameState !== "active" || !isDataReady || gameData.length === 0) return;
 
     const updateStockPrice = () => {
       setCurrentDataIndex((prevIndex) => {
@@ -195,7 +202,7 @@ function App() {
 
     const interval = setInterval(updateStockPrice, 200); // 200ms = 5 times per second
     return () => clearInterval(interval);
-  }, [isPaused, gameState, isDataReady, gameData]);
+  }, [gameState, isDataReady, gameData]);
 
   // Update previous price reference when price changes
   useEffect(() => {
@@ -236,10 +243,60 @@ function App() {
       } else {
         // Start the game
         setGameState("active");
-        setCountdownValue(3); // Reset for next time
+        setCountdownValue(5); // Reset for next time
       }
     }
   }, [gameState, countdownValue]);
+
+  // Save game results when game state changes to "ended"
+  useEffect(() => {
+    if (gameState === "ended" && challenge && !hasGameEndedSaved.current) {
+      hasGameEndedSaved.current = true;
+
+      // Calculate final values with current state
+      const finalValue = cash + shares * stockData.price;
+      const percentageChange =
+        ((finalValue - gameParameters.startingCash) /
+          gameParameters.startingCash) *
+        100;
+      const playerProfitPerTrade =
+        totalSharesBought > 0
+          ? (finalValue - gameParameters.startingCash) / totalSharesBought
+          : 0;
+
+      console.log("Game ended - saving results:", {
+        day: challenge.day,
+        finalValue,
+        cash,
+        shares,
+        stockPrice: stockData.price,
+        totalSharesBought,
+        averageBuyPrice,
+        percentageChange,
+        playerProfitPerTrade,
+      });
+
+      // Save to localStorage and Supabase
+      saveLeaderboardEntry(
+        challenge.day,
+        finalValue,
+        percentageChange,
+        averageBuyPrice,
+        playerProfitPerTrade
+      ).catch((error) => {
+        console.error("Error saving leaderboard entry:", error);
+      });
+    }
+  }, [
+    gameState,
+    challenge,
+    cash,
+    shares,
+    stockData.price,
+    gameParameters.startingCash,
+    totalSharesBought,
+    averageBuyPrice,
+  ]);
 
   const startGame = () => {
     if (!isDataReady || !challenge || gameData.length === 0) {
@@ -247,10 +304,19 @@ function App() {
       return;
     }
 
-    // Reset game state and start
-    setCurrentDataIndex(0);
-    setTimeRemaining(60); // 60 seconds as per game rules
-    setGameState("countdown");
+    // Reset the save flag for new game
+    hasGameEndedSaved.current = false;
+
+    // Start modal closing animation
+    setIsModalClosing(true);
+
+    // After animation completes, start the game
+    setTimeout(() => {
+      setCurrentDataIndex(0);
+      setTimeRemaining(60); // 60 seconds as per game rules
+      setGameState("countdown");
+      setIsModalClosing(false);
+    }, 200); // Match the fade-out duration
   };
 
   // Show error state when challenge fails to load
@@ -376,37 +442,72 @@ function App() {
     return formatted;
   };
 
+  // Header button handlers
+  const handleLeaderboardClick = () => {
+    console.log("Leaderboard clicked");
+    setShowLeaderboardModal(true);
+  };
+
+  const handleResultsClick = () => {
+    console.log("Results/Share clicked");
+    if (gameState === "ended") {
+      setShowEndGameModal(true);
+    }
+  };
+
+  const handleLeaderboardModalClick = () => {
+    setShowEndGameModal(false);
+    setShowLeaderboardModal(true);
+  };
+
+  const handleHelpClick = () => {
+    console.log("Help clicked");
+    // TODO: Implement help/tutorial functionality
+  };
+
+  const handleSettingsClick = () => {
+    console.log("Settings clicked");
+    // TODO: Implement settings functionality
+  };
+
   return (
-    <div
-      className="min-h-screen bg-[#fefefe]"
-      style={{
-        backgroundImage:
-          "radial-gradient(circle at 20px 20px, #f3f4f6 1px, transparent 1px)",
-        backgroundSize: "40px 40px",
-      }}
-    >
+    <div className="min-h-screen bg-[#f2f2f2] dark:bg-slate-900">
+      {/* Global Header */}
+      <Header
+        onLeaderboardClick={handleLeaderboardClick}
+        onResultsClick={handleResultsClick}
+        onHelpClick={handleHelpClick}
+        onSettingsClick={handleSettingsClick}
+        gameState={gameState}
+        hasPlayedToday={hasPlayedToday}
+      />
+
       {/* Single Vertical Panel */}
       <div className="max-w-4xl mx-auto p-8">
         {/* Chart Section */}
-        <div className="bg-white rounded-3xl card-shadow p-8 mb-8 game-tile">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 mb-8 game-tile">
           <div className="mb-6">
-            <h3 className="text-2xl font-bold text-gray-700">
-              {shouldBlurStockDetails
-                ? `Category: ${currentStock?.sector || "Mystery"}`
-                : `${currentStock?.symbol || "Stock"} - ${
-                    currentStock?.name || "Live Price Chart"
-                  }`}
-              {gameState === "ended" && currentStock?.symbol && (
-                <span className="text-lg font-semibold text-gray-500 ml-2">
-                  ({currentStock.symbol})
-                </span>
-              )}
-            </h3>
+            {gameState !== "ended" && (
+              <h3 className="text-2xl font-bold text-slate-700 dark:text-slate-300">
+                Category: {currentStock?.sector || "Mystery"}
+              </h3>
+            )}
+            {gameState === "ended" && (
+              <h3 className="text-2xl font-bold text-slate-700 dark:text-slate-300">
+                {currentStock?.name} ({currentStock?.symbol})
+              </h3>
+            )}
             {challenge && (
-              <p className="text-sm text-gray-500 font-medium">
+              <p className="text-lg text-slate-500 font-medium dark:text-slate-400">
                 {shouldBlurStockDetails
-                  ? `${challenge.startYear} - ${challenge.endYear} Period`
-                  : `${challenge.startDate} to ${challenge.endDate}`}
+                  ? formatDateRangeForBlurred(
+                      challenge.startDate,
+                      challenge.endDate
+                    )
+                  : formatDateRangeForDisplay(
+                      challenge.startDate,
+                      challenge.endDate
+                    )}
               </p>
             )}
           </div>
@@ -416,7 +517,7 @@ function App() {
             <div className="flex items-start justify-between mb-4">
               <div>
                 <div className="mb-3">
-                  <span className="text-5xl font-black text-gray-700">
+                  <span className="text-5xl font-black text-slate-700 dark:text-slate-300">
                     {formatCurrency(stockData.price)}
                   </span>
                 </div>
@@ -425,8 +526,8 @@ function App() {
                     <div
                       className={`${
                         stockData.change >= 0
-                          ? "text-emerald-500"
-                          : "text-orange-500"
+                          ? "text-green-500 dark:text-green-400"
+                          : "text-orange-500 dark:text-orange-400"
                       }`}
                     >
                       {stockData.change >= 0 ? (
@@ -462,8 +563,8 @@ function App() {
                     <span
                       className={`text-lg font-bold w-16 text-left ${
                         stockData.change >= 0
-                          ? "text-emerald-500"
-                          : "text-orange-500"
+                          ? "text-green-500 dark:text-green-400"
+                          : "text-orange-500 dark:text-orange-400"
                       }`}
                     >
                       {formatChange(stockData.percentChange, true)}
@@ -478,10 +579,10 @@ function App() {
                     <svg
                       className={`w-6 h-6 ${
                         timeRemaining > 30
-                          ? "text-emerald-500"
+                          ? "text-green-500 dark:text-green-400"
                           : timeRemaining > 10
-                          ? "text-yellow-500"
-                          : "text-red-500 animate-pulse"
+                          ? "text-yellow-500 dark:text-yellow-400"
+                          : "text-red-500 dark:text-red-400 animate-pulse"
                       }`}
                       fill="none"
                       stroke="currentColor"
@@ -497,10 +598,10 @@ function App() {
                     <span
                       className={`text-2xl font-black ${
                         timeRemaining > 30
-                          ? "text-emerald-500"
+                          ? "text-green-500 dark:text-green-400"
                           : timeRemaining > 10
-                          ? "text-yellow-500"
-                          : "text-red-500 animate-pulse"
+                          ? "text-yellow-500 dark:text-yellow-400"
+                          : "text-red-500 dark:text-red-400 animate-pulse"
                       }`}
                     >
                       {Math.floor(timeRemaining / 60)}:
@@ -513,14 +614,11 @@ function App() {
           </div>
 
           {/* Price Chart */}
-          <div
-            className="bg-slate-50 rounded-2xl p-6 card-shadow"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 10px 10px, #e2e8f0 1px, transparent 1px)",
-              backgroundSize: "20px 20px",
-            }}
-          >
+          <div className="bg-[#f2f2f2] dark:bg-slate-900 rounded-2xl p-6 relative">
+            {/* Countdown Overlay - Only over the chart */}
+            {gameState === "countdown" && (
+              <CountdownOverlay countdownValue={countdownValue} />
+            )}
             <div className="relative h-64 overflow-hidden">
               <svg
                 className="w-full h-full"
@@ -538,7 +636,7 @@ function App() {
                     <path
                       d="M 40 0 L 0 0 0 32"
                       fill="none"
-                      stroke="#cbd5e1"
+                      stroke="var(--chart-grid)"
                       strokeWidth="1"
                     />
                   </pattern>
@@ -569,7 +667,7 @@ function App() {
                   y1={plotTop}
                   x2={axisX}
                   y2={plotTop + plotHeight}
-                  stroke="#94a3b8"
+                  stroke="var(--chart-axis)"
                   strokeWidth="1"
                 />
                 {/* Max tick and label */}
@@ -578,7 +676,7 @@ function App() {
                   y1={yFor(priceRange.max)}
                   x2={axisX + 4}
                   y2={yFor(priceRange.max)}
-                  stroke="#94a3b8"
+                  stroke="var(--chart-axis)"
                   strokeWidth="1"
                 />
                 <text
@@ -586,7 +684,7 @@ function App() {
                   y={yFor(priceRange.max) + 4}
                   textAnchor="end"
                   fontSize="14"
-                  fill="#64748b"
+                  fill="var(--chart-text)"
                 >
                   {formatCurrency(priceRange.max)}
                 </text>
@@ -596,7 +694,7 @@ function App() {
                   y1={yFor(priceRange.min)}
                   x2={axisX + 4}
                   y2={yFor(priceRange.min)}
-                  stroke="#94a3b8"
+                  stroke="var(--chart-axis)"
                   strokeWidth="1"
                 />
                 <text
@@ -604,7 +702,7 @@ function App() {
                   y={yFor(priceRange.min) + 4}
                   textAnchor="end"
                   fontSize="14"
-                  fill="#64748b"
+                  fill="var(--chart-text)"
                 >
                   {formatCurrency(priceRange.min)}
                 </text>
@@ -669,8 +767,8 @@ function App() {
                 )}
               </svg>
             </div>
-            <div className="flex justify-between text-base text-gray-500 font-semibold mt-6">
-              <span className="text-gray-500">
+            <div className="flex justify-between text-base text-slate-500 font-semibold mt-6">
+              <span className="text-slate-500 dark:text-slate-400">
                 <span className="font-bold">10s Range:</span>{" "}
                 <span className="font-semibold">
                   {formatCurrency(priceRange.min)} -{" "}
@@ -680,7 +778,7 @@ function App() {
               <div className="flex gap-6">
                 {shares > 0 && (
                   <span className="flex items-center gap-2">
-                    <div className="w-4 h-1 bg-yellow-400 rounded-full"></div>
+                    <div className="w-4 h-1 bg-yellow-400 dark:bg-yellow-400 rounded-full"></div>
                     Avg Buy: {formatCurrency(currentHoldingsAvgPrice)}
                   </span>
                 )}
@@ -700,21 +798,20 @@ function App() {
               onClick={() => buyStock(1)}
               disabled={
                 gameState === "pre-game" ||
+                gameState === "countdown" ||
                 gameState === "ended" ||
                 cash < stockData.price
               }
               className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
-                gameState === "countdown"
-                  ? "bg-emerald-400 hover:bg-emerald-500 text-white cursor-pointer"
-                  : gameState === "active" && cash >= stockData.price
-                  ? "bg-emerald-500 hover:bg-emerald-600 text-white"
-                  : "bg-gray-300 cursor-not-allowed text-gray-500"
+                gameState === "active" && cash >= stockData.price
+                  ? "bg-green-500 hover:bg-green-600 text-white"
+                  : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
               <span className="text-xl font-black">+</span>
               <div className="text-center">
                 <div className="text-lg font-black">BUY 1</div>
-                <div className="text-xs opacity-90">
+                <div className="text-sm opacity-90">
                   {formatCurrency(stockData.price)}
                 </div>
               </div>
@@ -724,21 +821,20 @@ function App() {
               onClick={() => buyStock(5)}
               disabled={
                 gameState === "pre-game" ||
+                gameState === "countdown" ||
                 gameState === "ended" ||
                 cash < stockData.price * 5
               }
               className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
-                gameState === "countdown"
-                  ? "bg-emerald-500 hover:bg-emerald-600 text-white cursor-pointer"
-                  : gameState === "active" && cash >= stockData.price * 5
-                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                  : "bg-gray-300 cursor-not-allowed text-gray-500"
+                gameState === "active" && cash >= stockData.price * 5
+                  ? "bg-green-600 hover:bg-green-700 text-white"
+                  : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
               <span className="text-xl font-black">+</span>
               <div className="text-center">
                 <div className="text-lg font-black">BUY 5</div>
-                <div className="text-xs opacity-90">
+                <div className="text-sm opacity-90">
                   {formatCurrency(stockData.price * 5)}
                 </div>
               </div>
@@ -748,24 +844,23 @@ function App() {
               onClick={() => buyStock(Math.floor(cash / stockData.price))}
               disabled={
                 gameState === "pre-game" ||
+                gameState === "countdown" ||
                 gameState === "ended" ||
                 cash < stockData.price ||
                 Math.floor(cash / stockData.price) === 0
               }
               className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
-                gameState === "countdown"
-                  ? "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
-                  : gameState === "active" &&
-                    cash >= stockData.price &&
-                    Math.floor(cash / stockData.price) > 0
-                  ? "bg-emerald-700 hover:bg-emerald-800 text-white"
-                  : "bg-gray-300 cursor-not-allowed text-gray-500"
+                gameState === "active" &&
+                cash >= stockData.price &&
+                Math.floor(cash / stockData.price) > 0
+                  ? "bg-green-700 hover:bg-green-800 text-white"
+                  : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
               <span className="text-xl font-black">+</span>
               <div className="text-center">
                 <div className="text-lg font-black">MAX</div>
-                <div className="text-xs opacity-90">
+                <div className="text-sm opacity-90">
                   {Math.floor(cash / stockData.price)} shares
                 </div>
               </div>
@@ -778,21 +873,20 @@ function App() {
               onClick={() => sellStock(1)}
               disabled={
                 gameState === "pre-game" ||
+                gameState === "countdown" ||
                 gameState === "ended" ||
                 shares === 0
               }
               className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
-                gameState === "countdown"
-                  ? "bg-orange-400 hover:bg-orange-500 text-white cursor-pointer"
-                  : gameState === "active" && shares > 0
+                gameState === "active" && shares > 0
                   ? "bg-orange-500 hover:bg-orange-600 text-white"
-                  : "bg-gray-300 cursor-not-allowed text-gray-500"
+                  : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
               <span className="text-xl font-black">−</span>
               <div className="text-center">
                 <div className="text-lg font-black">SELL 1</div>
-                <div className="text-xs opacity-90">
+                <div className="text-sm opacity-90">
                   {formatCurrency(stockData.price)}
                 </div>
               </div>
@@ -801,20 +895,21 @@ function App() {
             <button
               onClick={() => sellStock(5)}
               disabled={
-                gameState === "pre-game" || gameState === "ended" || shares < 5
+                gameState === "pre-game" ||
+                gameState === "countdown" ||
+                gameState === "ended" ||
+                shares < 5
               }
               className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
-                gameState === "countdown"
-                  ? "bg-orange-500 hover:bg-orange-600 text-white cursor-pointer"
-                  : gameState === "active" && shares >= 5
+                gameState === "active" && shares >= 5
                   ? "bg-orange-600 hover:bg-orange-700 text-white"
-                  : "bg-gray-300 cursor-not-allowed text-gray-500"
+                  : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
               <span className="text-xl font-black">−</span>
               <div className="text-center">
                 <div className="text-lg font-black">SELL 5</div>
-                <div className="text-xs opacity-90">
+                <div className="text-sm opacity-90">
                   {formatCurrency(stockData.price * 5)}
                 </div>
               </div>
@@ -824,34 +919,33 @@ function App() {
               onClick={() => sellStock(shares)}
               disabled={
                 gameState === "pre-game" ||
+                gameState === "countdown" ||
                 gameState === "ended" ||
                 shares === 0
               }
               className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
-                gameState === "countdown"
-                  ? "bg-orange-600 hover:bg-orange-700 text-white cursor-pointer"
-                  : gameState === "active" && shares > 0
+                gameState === "active" && shares > 0
                   ? "bg-orange-700 hover:bg-orange-800 text-white"
-                  : "bg-gray-300 cursor-not-allowed text-gray-500"
+                  : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
               <span className="text-xl font-black">−</span>
               <div className="text-center">
                 <div className="text-lg font-black">ALL</div>
-                <div className="text-xs opacity-90">{shares} shares</div>
+                <div className="text-sm opacity-90">{shares} shares</div>
               </div>
             </button>
           </div>
         </div>
 
         {/* Game State Information Card */}
-        <div className="bg-white rounded-3xl card-shadow p-8 mb-8 game-tile">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 mb-8 game-tile">
           {/* Game Status */}
           <div className="mb-6">
             {/* Full Width Portfolio Progress Bar */}
             <div className="space-y-2">
-              <div className="flex justify-between text-xs text-gray-500">
-                <span className="text-sm font-semibold text-gray-500">
+              <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
                   Need:{" "}
                   {formatCurrency(
                     Math.max(0, gameParameters.targetValue - totalValue)
@@ -865,9 +959,9 @@ function App() {
                   %
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
+              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
                 <div
-                  className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-3 rounded-full transition-all duration-300"
+                  className="bg-gradient-to-r from-green-500 to-green-400 h-3 rounded-full transition-all duration-300"
                   style={{
                     width: `${Math.min(
                       (totalValue / gameParameters.targetValue) * 100,
@@ -882,16 +976,16 @@ function App() {
           {/* Game Target Information */}
           <div className="grid grid-cols-1 md:grid-cols-2">
             <div className="text-center">
-              <p className="text-sm font-semibold text-gray-500 mb-1">
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
                 Current Value
               </p>
               <p
                 className={`text-2xl font-black ${
                   totalValue >= gameParameters.targetValue
-                    ? "text-emerald-600"
+                    ? "text-green-600 dark:text-green-400"
                     : totalValue >= gameParameters.startingCash
-                    ? "text-blue-600"
-                    : "text-orange-600"
+                    ? "text-blue-600 dark:text-sky-400"
+                    : "text-orange-600 dark:text-orange-400"
                 }`}
               >
                 {formatCurrency(totalValue)}
@@ -899,10 +993,10 @@ function App() {
             </div>
 
             <div className="text-center">
-              <p className="text-sm font-semibold text-gray-500 mb-1">
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
                 Target Value
               </p>
-              <p className="text-2xl font-black text-emerald-600">
+              <p className="text-2xl font-black text-green-600 dark:text-green-400">
                 {formatCurrency(gameParameters.targetValue)}
               </p>
             </div>
@@ -910,44 +1004,37 @@ function App() {
         </div>
 
         {/* Portfolio Information Card */}
-        <div className="bg-white rounded-3xl card-shadow p-8 game-tile">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 game-tile">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-gray-700">
+            <h3 className="text-2xl font-bold text-slate-700 dark:text-slate-300">
               Portfolio Summary
             </h3>
-            {gameState === "ended" && (
-              <div
-                className={`px-4 py-2 rounded-full font-bold text-sm cursor-pointer hover:scale-105 transition-transform duration-200 ${
-                  totalValue >= gameParameters.targetValue
-                    ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                    : "bg-red-100 text-red-700 hover:bg-red-200"
-                }`}
-                onClick={() => setShowEndGameModal(true)}
-                title="Click to view detailed results"
-              >
-                {totalValue >= gameParameters.targetValue
-                  ? "🎉 You Won!"
-                  : "💸 You Lost"}
-              </div>
-            )}
           </div>
 
+          {totalSharesBought === 0 && (
+            <div className="bg-amber-50 dark:bg-slate-800 rounded-2xl p-6">
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                No shares bought
+              </p>
+            </div>
+          )}
+
           {totalSharesBought > 0 && (
-            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6">
+            <div className="bg-amber-50 dark:bg-slate-800 rounded-2xl p-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-sm font-semibold text-gray-500 mb-1">
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     Lifetime Average Buy Price
                   </p>
-                  <p className="text-2xl font-black text-gray-700">
+                  <p className="text-2xl font-black text-slate-700 dark:text-slate-300">
                     {formatCurrency(averageBuyPrice)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-500 mb-1">
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     Lifetime Shares Bought
                   </p>
-                  <p className="text-2xl font-black text-gray-700">
+                  <p className="text-2xl font-black text-slate-700 dark:text-slate-300">
                     {totalSharesBought}
                   </p>
                 </div>
@@ -957,41 +1044,48 @@ function App() {
         </div>
       </div>
 
-      {/* Game Modal */}
-      {gameState === "pre-game" && (
-        <GameModal
-          startingCash={gameParameters.startingCash}
-          startingStockPrice={gameParameters.initialStockPrice}
-          targetValue={gameParameters.targetValue}
-          targetReturnPercentage={gameParameters.targetReturnPercentage}
-          onStart={startGame}
-          isLoading={challengeLoading || !isDataReady}
-          loadingText={
-            challengeLoading
-              ? "Loading daily challenge..."
-              : !isDataReady
-              ? "Preparing game data..."
-              : challengeError
-              ? "Failed to load challenge"
-              : undefined
-          }
-          stockInfo={currentStock}
-          dateRange={
-            challenge
-              ? {
-                  startDate: challenge.startDate,
-                  endDate: challenge.endDate,
-                  days: challenge.tradingDays,
-                }
-              : null
-          }
-        />
-      )}
+      {/* Loading Spinner - Show while data is loading */}
+      {gameState === "pre-game" &&
+        (challengeLoading || !isDataReady || !challenge) && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-50 dark:bg-slate-900 opacity-70">
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-4 border-4 border-green-200 border-t-green-500 rounded-full animate-spin"></div>
+              <p className="text-white font-semibold">
+                {challengeLoading
+                  ? "Loading daily challenge..."
+                  : !isDataReady
+                  ? "Preparing game data..."
+                  : challengeError
+                  ? "Failed to load challenge"
+                  : "Getting ready..."}
+              </p>
+            </div>
+          </div>
+        )}
 
-      {/* Countdown Overlay */}
-      {gameState === "countdown" && (
-        <CountdownOverlay countdownValue={countdownValue} />
-      )}
+      {/* Game Modal - Only show when data is fully loaded */}
+      {gameState === "pre-game" &&
+        !challengeLoading &&
+        isDataReady &&
+        challenge && (
+          <GameModal
+            startingCash={gameParameters.startingCash}
+            startingStockPrice={gameParameters.initialStockPrice}
+            targetValue={gameParameters.targetValue}
+            targetReturnPercentage={gameParameters.targetReturnPercentage}
+            onStart={startGame}
+            stockInfo={currentStock}
+            dateRange={{
+              startDate: challenge.startDate,
+              endDate: challenge.endDate,
+              days: challenge.tradingDays,
+            }}
+            isClosing={isModalClosing}
+            hasPlayedToday={hasPlayedToday}
+            onLeaderboardClick={handleLeaderboardClick}
+            onResultsClick={handleResultsClick}
+          />
+        )}
 
       {/* End Game Modal */}
       {showEndGameModal && currentStock && challenge && parPerformance && (
@@ -1013,11 +1107,22 @@ function App() {
             shares,
             currentStockPrice: stockData.price,
           }}
+          day={challenge.day}
           onClose={() => {
             setShowEndGameModal(false);
             // Keep game in ended state so user can see final results
           }}
+          onLeaderboardClick={handleLeaderboardModalClick}
           formatCurrency={formatCurrency}
+        />
+      )}
+
+      {/* Leaderboard Modal */}
+      {showLeaderboardModal && (
+        <LeaderboardModal
+          onClose={() => {
+            setShowLeaderboardModal(false);
+          }}
         />
       )}
 
@@ -1027,39 +1132,6 @@ function App() {
           gameState === "pre-game" ? "backdrop-blur-sm" : ""
         }`}
       />
-
-      {/* Developer Mode */}
-      {!isDevModeOpen ? (
-        <div className="fixed bottom-4 right-4 z-50">
-          <button
-            onClick={() => setIsDevModeOpen(true)}
-            className="bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-105"
-            title="Developer Mode"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-              />
-            </svg>
-          </button>
-        </div>
-      ) : (
-        <DeveloperMode
-          isOpen={isDevModeOpen}
-          onClose={() => setIsDevModeOpen(false)}
-          isPaused={isPaused}
-          onTogglePause={() => setIsPaused(!isPaused)}
-        />
-      )}
     </div>
   );
 }

@@ -16,7 +16,9 @@ interface EndGameModalProps {
     shares: number;
     currentStockPrice: number;
   };
+  day: number;
   onClose: () => void;
+  onLeaderboardClick: () => void;
   formatCurrency: (amount: number) => string;
 }
 
@@ -27,10 +29,11 @@ function EndGameModal({
   gameParameters,
   parPerformance,
   playerStats,
+  day,
   onClose,
+  onLeaderboardClick,
   formatCurrency,
 }: EndGameModalProps) {
-  const [shareSuccess, setShareSuccess] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
 
@@ -42,14 +45,6 @@ function EndGameModal({
       : 0;
 
   const generateShareText = (): string => {
-    // Generate date-based game number (days since epoch)
-    const today = new Date();
-    const epoch = new Date("2024-01-01");
-    const daysSinceEpoch = Math.floor(
-      (today.getTime() - epoch.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const gameNumber = daysSinceEpoch;
-
     // Compare player performance to par and generate emoji indicators
     const performanceEmojis: string[] = [];
 
@@ -90,7 +85,7 @@ function EndGameModal({
       100;
 
     // Build share text
-    const shareText = `Tradle #${gameNumber} ${performanceEmojis.join("")}
+    const shareText = `Tradle #${day} ${performanceEmojis.join("")}
 Final Value: ${formatCurrency(playerStats.finalValue)} (${
       returnPercent >= 0 ? "+" : ""
     }${returnPercent.toFixed(1)}%)${
@@ -104,58 +99,30 @@ Play at tradle.game`;
     return shareText;
   };
 
-  const handleShare = async () => {
-    const shareText = generateShareText();
-
-    if (navigator.share) {
-      // Use native share API if available (mobile)
-      await navigator.share({
-        title: "Tradle - Daily Stock Challenge",
-        text: shareText,
-      });
-    } else {
-      // Fallback to clipboard
-      await navigator.clipboard.writeText(shareText);
-      setShareSuccess(true);
-      setTimeout(() => setShareSuccess(false), 2000);
-    }
-  };
-
   const returnPercent =
     ((playerStats.finalValue - gameParameters.startingCash) /
       gameParameters.startingCash) *
     100;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 animate-in fade-in duration-300">
       {/* Backdrop */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-opacity-20"></div>
+      <div className="absolute inset-0 backdrop-blur-sm bg-opacity-50"></div>
 
       {/* Modal */}
-      <div className="relative bg-slate-50 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-4 sm:p-8 max-w-sm sm:max-w-md w-full max-h-full overflow-y-auto my-4">
+      <div className="relative bg-[#f2f2f2] dark:bg-slate-900 border-1 border-gray-200 dark:border-gray-700 shadow-sm rounded-3xl p-4 sm:p-8 max-w-sm sm:max-w-md w-full max-h-full overflow-y-auto my-4 transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4 duration-500 ease-out">
         {/* Results Summary */}
         <div className="space-y-8 mb-8">
           {/* Stock Reveal - Main Focus */}
-          <div className="bg-slate-100 dark:bg-slate-800 border-2 border-emerald-200 rounded-3xl p-8">
-            <div className="text-center mb-4">
-              <div
-                className={`inline-flex items-center gap-1 px-4 py-2 rounded-full font-semibold text-sm ${
-                  isWinner
-                    ? "bg-emerald-500 dark:bg-emerald-600 text-gray-800 dark:text-gray-200"
-                    : "bg-orange-500 dark:bg-orange-600 text-gray-800 dark:text-gray-200"
-                }`}
-              >
-                {isWinner ? "🎉 You broke the bank!" : "💸 Try again tomorrow"}
-              </div>
-            </div>
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8">
             <div className="text-center">
-              <div className="text-4xl font-black text-gray-800 dark:text-gray-200 mb-2">
+              <div className="text-4xl font-black text-slate-800 dark:text-slate-200 mb-2">
                 {stockInfo.symbol}
               </div>
-              <div className="text-lg text-gray-600 dark:text-gray-400 font-semibold mb-2">
+              <div className="text-lg text-slate-600 dark:text-slate-400 font-semibold">
                 {stockInfo.name}
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
+              <div className="text-slate-500 dark:text-slate-400">
                 {stockInfo.sector} •{" "}
                 {new Date(dateRange.startDate).getFullYear()}-
                 {new Date(dateRange.endDate).getFullYear()}
@@ -164,8 +131,8 @@ Play at tradle.game`;
           </div>
 
           {/* Share Section - Secondary Focus */}
-          <div className="bg-slate-100 dark:bg-slate-800 rounded-3xl p-8">
-            <h2 className="text-xl font-bold text-gray-700 dark:text-gray-300 mb-4 text-center">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8">
+            <h2 className="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4 text-center">
               Share Your Result
             </h2>
 
@@ -180,7 +147,7 @@ Play at tradle.game`;
                     ? "🟩"
                     : "🟥"}
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
                   Buy Price
                 </div>
               </div>
@@ -193,7 +160,7 @@ Play at tradle.game`;
                     ? "🟩"
                     : "🟥"}
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
                   PPT
                 </div>
               </div>
@@ -203,7 +170,7 @@ Play at tradle.game`;
                     ? "✅"
                     : "❌"}
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
                   Target
                 </div>
               </div>
@@ -211,51 +178,54 @@ Play at tradle.game`;
 
             <div className="flex gap-4 justify-center">
               <button
-                onClick={handleShare}
-                disabled={shareSuccess}
-                className={`font-bold py-3 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 ${
-                  shareSuccess
-                    ? "bg-emerald-500 text-white"
-                    : "bg-emerald-500 hover:bg-emerald-600 text-white"
-                }`}
-              >
-                {shareSuccess ? "Copied!" : "Share"}
-              </button>
-
-              <button
                 onClick={async () => {
                   await navigator.clipboard.writeText(generateShareText());
                   setCopySuccess(true);
                   setTimeout(() => setCopySuccess(false), 2000);
                 }}
-                className={`font-bold py-3 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 ${
+                className={`font-medium py-4 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 ${
                   copySuccess
-                    ? "bg-emerald-500 text-white"
-                    : "bg-gray-600 hover:bg-gray-700 text-white"
+                    ? "bg-green-500 text-white"
+                    : "bg-slate-600 hover:bg-slate-700 text-white"
                 }`}
               >
                 {copySuccess ? "Copied!" : "Copy"}
+              </button>
+
+              <button
+                onClick={onLeaderboardClick}
+                className="font-medium py-4 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                Leaderboard
               </button>
             </div>
           </div>
 
           {/* Detailed Results - Collapseable */}
-          <div className="bg-slate-100 dark:bg-slate-800 rounded-3xl overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden">
             <button
               onClick={() => setDetailsExpanded(!detailsExpanded)}
-              className="w-full px-6 py-4 text-left hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors duration-200 group"
+              className="w-full px-6 py-4 text-left hover:bg-[#e6e6e6] dark:hover:bg-slate-700 transition-colors duration-200 group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 flex items-center justify-center">
-                  <span
-                    className={`text-slate-600 dark:text-slate-400 font-bold transition-transform duration-400 ${
+                  <svg
+                    className={`w-4 h-4 text-slate-600 dark:text-slate-400 transition-transform duration-400 ${
                       detailsExpanded ? "rotate-90" : ""
                     }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    ›
-                  </span>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={3}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
                 </div>
-                <h3 className="text-lg font-bold text-gray-700 dark:text-gray-300">
+                <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">
                   Detailed Results
                 </h3>
               </div>
@@ -268,16 +238,16 @@ Play at tradle.game`;
               <div className="px-8 pb-8 pt-1">
                 <div className="grid grid-cols-2 gap-6 text-sm mb-6">
                   <div className="text-center">
-                    <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-1 font-semibold">
                       Final Value
                     </p>
-                    <p className="text-lg font-bold text-gray-700 dark:text-gray-300">
+                    <p className="text-lg font-bold text-slate-700 dark:text-slate-300">
                       {formatCurrency(playerStats.finalValue)}
                     </p>
                     <p
-                      className={`text-xs font-medium ${
+                      className={`text-sm font-medium ${
                         returnPercent >= 0
-                          ? "text-emerald-600 dark:text-emerald-400"
+                          ? "text-green-600 dark:text-green-400"
                           : "text-orange-600 dark:text-orange-400"
                       }`}
                     >
@@ -286,16 +256,16 @@ Play at tradle.game`;
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-1 font-semibold">
                       Target
                     </p>
-                    <p className="text-lg font-bold text-gray-700 dark:text-gray-300">
+                    <p className="text-lg font-bold text-slate-700 dark:text-slate-300">
                       {formatCurrency(gameParameters.targetValue)}
                     </p>
                     <p
-                      className={`text-xs font-medium ${
+                      className={`text-sm font-medium ${
                         isWinner
-                          ? "text-emerald-600 dark:text-emerald-400"
+                          ? "text-green-600 dark:text-green-400"
                           : "text-orange-600 dark:text-orange-400"
                       }`}
                     >
@@ -307,7 +277,7 @@ Play at tradle.game`;
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-6 text-sm">
                       <div className="text-center">
-                        <p className="text-gray-500 dark:text-gray-400 text-xs mb-2">
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-2 font-semibold">
                           Average Buy Price
                         </p>
                         <div className="space-y-1">
@@ -315,20 +285,20 @@ Play at tradle.game`;
                             className={`font-medium text-sm ${
                               playerStats.averageBuyPrice <=
                               parPerformance.parAverageBuyPrice
-                                ? "text-emerald-600 dark:text-emerald-400"
+                                ? "text-green-600 dark:text-green-400"
                                 : "text-orange-600 dark:text-orange-400"
                             }`}
                           >
                             {formatCurrency(playerStats.averageBuyPrice)}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-sm text-slate-500 dark:text-slate-400">
                             Par:{" "}
                             {formatCurrency(parPerformance.parAverageBuyPrice)}
                           </p>
                         </div>
                       </div>
                       <div className="text-center">
-                        <p className="text-gray-500 dark:text-gray-400 text-xs mb-2">
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-2 font-semibold">
                           Profit Per Trade
                         </p>
                         <div className="space-y-1">
@@ -337,13 +307,13 @@ Play at tradle.game`;
                               isNaN(parPerformance.parProfitPerTrade) ||
                               playerProfitPerTrade >=
                                 parPerformance.parProfitPerTrade
-                                ? "text-emerald-600 dark:text-emerald-400"
+                                ? "text-green-600 dark:text-green-400"
                                 : "text-orange-600 dark:text-orange-400"
                             }`}
                           >
                             {formatCurrency(playerProfitPerTrade)}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-sm text-slate-500 dark:text-slate-400">
                             Par:{" "}
                             {isNaN(parPerformance.parProfitPerTrade)
                               ? "$0.00"
@@ -361,13 +331,19 @@ Play at tradle.game`;
           </div>
         </div>
 
-        {/* Close Button */}
-        <div className="flex justify-center">
+        {/* Action Buttons */}
+        <div className="flex justify-center gap-4">
           <button
             onClick={onClose}
-            className="font-bold py-4 px-8 rounded-3xl floating-button bounce-click transition-all duration-200 bg-gray-600 hover:bg-gray-700 text-white"
+            className="font-medium py-4 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-slate-600 hover:bg-slate-700 text-white"
           >
             Close
+          </button>
+          <button
+            onClick={onClose}
+            className="font-medium py-4 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+          >
+            Play again
           </button>
         </div>
       </div>

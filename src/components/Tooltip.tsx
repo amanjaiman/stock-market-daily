@@ -1,4 +1,4 @@
-import { useState, ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 interface TooltipProps {
   children: ReactNode;
@@ -24,7 +24,7 @@ function Tooltip({ children, content, className = "" }: TooltipProps) {
   return (
     <span className={`relative inline ${className}`}>
       <span
-        className="cursor-help underline decoration-dotted decoration-emerald-500 decoration-2 underline-offset-2 text-emerald-600 dark:text-emerald-400 font-semibold whitespace-nowrap"
+        className="cursor-help underline decoration-dotted decoration-green-500 decoration-2 underline-offset-2 text-green-600 dark:text-green-400 font-semibold whitespace-nowrap"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onClick={handleToggle}

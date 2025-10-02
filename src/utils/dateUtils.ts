@@ -92,3 +92,34 @@ export const getDailySeed = (): number => {
 
   return year * 10000 + month * 100 + day;
 };
+
+// Format date for display in UI (e.g., "Jun 30, 2023")
+export const formatDateForDisplay = (dateString: string): string => {
+  const date = parseAPIDate(dateString);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
+// Format date range for display (e.g., "Jun 30, 2021 to Jun 30, 2023")
+export const formatDateRangeForDisplay = (startDate: string, endDate: string): string => {
+  return `${formatDateForDisplay(startDate)} to ${formatDateForDisplay(endDate)}`;
+};
+
+// Format date for abbreviated month and year display (e.g., "Jun 2021")
+export const formatMonthYear = (dateString: string): string => {
+  const date = parseAPIDate(dateString);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+  });
+};
+
+// Format date range for blurred display (e.g., "Jun 2021 - 2023")
+export const formatDateRangeForBlurred = (startDate: string, endDate: string): string => {
+  const startMonthYear = formatMonthYear(startDate);
+  const endYear = parseAPIDate(endDate).getFullYear();
+  return `${startMonthYear} - ${endYear}`;
+};
