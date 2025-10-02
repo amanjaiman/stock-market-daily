@@ -40,14 +40,14 @@ const Header: React.FC<HeaderProps> = ({
   };
   return (
     <header className="w-full bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-      <div className="max-w-6xl mx-auto px-6 py-4">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between">
           {/* Left side - Empty */}
-          <div className="w-32"></div>
+          <div className="w-16 sm:w-32"></div>
 
           {/* Center - Game Title */}
           <div className="flex-1 flex justify-center">
-            <h1 className="game-title text-3xl font-black text-slate-800 dark:text-slate-100">
+            <h1 className="game-title text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100">
               Day
               <span className="game-title text-green-600 dark:text-green-400">
                 Tradle
@@ -56,15 +56,15 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right side - Icon buttons */}
-          <div className="flex items-center gap-2 w-32 justify-end">
+          <div className="flex items-center gap-1 sm:gap-2 w-16 sm:w-32 justify-end">
             {/* Leaderboard */}
             <button
               onClick={onLeaderboardClick}
-              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200 group"
+              className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200 group"
               title="Leaderboard"
             >
               <svg
-                className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
+                className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -85,7 +85,7 @@ const Header: React.FC<HeaderProps> = ({
                   ? onResultsClick
                   : undefined
               }
-              className={`p-2 rounded-lg transition-colors duration-200 group ${
+              className={`p-1.5 sm:p-2 rounded-lg transition-colors duration-200 group ${
                 gameState === "ended" || hasPlayedToday
                   ? "hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
                   : "cursor-not-allowed opacity-50"
@@ -98,7 +98,7 @@ const Header: React.FC<HeaderProps> = ({
               disabled={!(gameState === "ended" || hasPlayedToday)}
             >
               <svg
-                className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
+                className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -115,11 +115,11 @@ const Header: React.FC<HeaderProps> = ({
             {/* Help */}
             <button
               onClick={onHelpClick}
-              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200 group"
+              className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200 group"
               title="Help"
             >
               <svg
-                className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
+                className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -136,13 +136,13 @@ const Header: React.FC<HeaderProps> = ({
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200 group"
+              className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200 group"
               title={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
               {isDark ? (
                 // Sun icon for light mode
                 <svg
-                  className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
+                  className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -157,7 +157,7 @@ const Header: React.FC<HeaderProps> = ({
               ) : (
                 // Moon icon for dark mode
                 <svg
-                  className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
+                  className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

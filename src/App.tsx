@@ -315,11 +315,12 @@ function App() {
     // Start modal closing animation
     setIsModalClosing(true);
 
-    // After animation completes, start the game
+    // After animation completes, start the game and hide the modal
     setTimeout(() => {
       setCurrentDataIndex(0);
       setTimeRemaining(60); // 60 seconds as per game rules
       setGameState("countdown");
+      setShowGameModal(false); // Actually hide the modal
       setIsModalClosing(false);
     }, 200); // Match the fade-out duration
   };
@@ -506,22 +507,22 @@ function App() {
       />
 
       {/* Single Vertical Panel */}
-      <div className="max-w-4xl mx-auto p-7">
+      <div className="max-w-4xl mx-auto p-3 sm:p-7">
         {/* Chart Section */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 mb-8 game-tile">
-          <div className="mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-8 mb-4 sm:mb-8 game-tile">
+          <div className="mb-3 sm:mb-6">
             {gameState !== "ended" && (
-              <h3 className="text-2xl font-bold text-slate-700 dark:text-slate-300">
+              <h3 className="text-lg sm:text-2xl font-bold text-slate-700 dark:text-slate-300">
                 Category: {currentStock?.sector || "Mystery"}
               </h3>
             )}
             {gameState === "ended" && (
-              <h3 className="text-2xl font-bold text-slate-700 dark:text-slate-300">
+              <h3 className="text-lg sm:text-2xl font-bold text-slate-700 dark:text-slate-300">
                 {currentStock?.name} ({currentStock?.symbol})
               </h3>
             )}
             {challenge && (
-              <p className="text-lg text-slate-500 font-medium dark:text-slate-400">
+              <p className="text-sm sm:text-lg text-slate-500 font-medium dark:text-slate-400">
                 {shouldBlurStockDetails
                   ? formatDateRangeForBlurred(
                       challenge.startDate,
@@ -536,11 +537,11 @@ function App() {
           </div>
 
           {/* Price Display - Full Width */}
-          <div className="mb-8">
-            <div className="flex items-start justify-between mb-4">
+          <div className="mb-4 sm:mb-8">
+            <div className="flex items-start justify-between mb-2 sm:mb-4">
               <div>
-                <div className="mb-3">
-                  <span className="text-5xl font-black text-slate-700 dark:text-slate-300">
+                <div className="mb-2 sm:mb-3">
+                  <span className="text-3xl sm:text-5xl font-black text-slate-700 dark:text-slate-300">
                     {formatCurrency(stockData.price)}
                   </span>
                 </div>
@@ -619,7 +620,7 @@ function App() {
                       />
                     </svg>
                     <span
-                      className={`text-2xl font-black ${
+                      className={`text-xl sm:text-2xl font-black ${
                         timeRemaining > 30
                           ? "text-green-500 dark:text-green-400"
                           : timeRemaining > 10
@@ -637,7 +638,7 @@ function App() {
           </div>
 
           {/* Price Chart */}
-          <div className="bg-[#f2f2f2] dark:bg-slate-900 rounded-2xl p-6 relative">
+          <div className="bg-[#f2f2f2] dark:bg-slate-900 rounded-2xl p-3 sm:p-6 relative">
             {/* Countdown Overlay - Only over the chart */}
             {(gameState === "countdown" ||
               (gameState === "pre-game" &&
@@ -799,7 +800,7 @@ function App() {
                 )}
               </svg>
             </div>
-            <div className="flex justify-between text-base text-slate-500 font-semibold mt-6">
+            <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 text-xs sm:text-base text-slate-500 font-semibold mt-3 sm:mt-6">
               <span className="text-slate-500 dark:text-slate-400">
                 <span className="font-bold">10s Range:</span>{" "}
                 <span className="font-semibold">
@@ -807,7 +808,7 @@ function App() {
                   {formatCurrency(priceRange.max)}
                 </span>
               </span>
-              <div className="flex gap-6">
+              <div className="flex gap-3 sm:gap-6 flex-wrap">
                 {shares > 0 && (
                   <span className="flex items-center gap-2">
                     <div className="w-4 h-1 bg-yellow-400 dark:bg-yellow-400 rounded-full"></div>
@@ -823,9 +824,9 @@ function App() {
         </div>
 
         {/* Buy/Sell Button Groups */}
-        <div className="flex gap-6 mb-8">
+        <div className="grid grid-cols-3 sm:flex sm:gap-6 gap-2 mb-4 sm:mb-8">
           {/* Buy Buttons */}
-          <div className="flex gap-2 flex-1">
+          <div className="contents sm:flex sm:gap-2 sm:flex-1">
             <button
               onClick={() => buyStock(1)}
               disabled={
@@ -834,16 +835,16 @@ function App() {
                 gameState === "ended" ||
                 cash < stockData.price
               }
-              className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
                 gameState === "active" && cash >= stockData.price
                   ? "bg-green-500 hover:bg-green-600 text-white"
                   : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
-              <span className="text-xl font-black">+</span>
+              <span className="text-lg sm:text-xl font-black">+</span>
               <div className="text-center">
-                <div className="text-lg font-black">BUY 1</div>
-                <div className="text-sm opacity-90">
+                <div className="text-sm sm:text-lg font-black">BUY 1</div>
+                <div className="text-xs sm:text-sm opacity-90">
                   {formatCurrency(stockData.price)}
                 </div>
               </div>
@@ -857,16 +858,16 @@ function App() {
                 gameState === "ended" ||
                 cash < stockData.price * 5
               }
-              className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
                 gameState === "active" && cash >= stockData.price * 5
                   ? "bg-green-600 hover:bg-green-700 text-white"
                   : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
-              <span className="text-xl font-black">+</span>
+              <span className="text-lg sm:text-xl font-black">+</span>
               <div className="text-center">
-                <div className="text-lg font-black">BUY 5</div>
-                <div className="text-sm opacity-90">
+                <div className="text-sm sm:text-lg font-black">BUY 5</div>
+                <div className="text-xs sm:text-sm opacity-90">
                   {formatCurrency(stockData.price * 5)}
                 </div>
               </div>
@@ -881,7 +882,7 @@ function App() {
                 cash < stockData.price ||
                 Math.floor(cash / stockData.price) === 0
               }
-              className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
                 gameState === "active" &&
                 cash >= stockData.price &&
                 Math.floor(cash / stockData.price) > 0
@@ -889,10 +890,10 @@ function App() {
                   : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
-              <span className="text-xl font-black">+</span>
+              <span className="text-lg sm:text-xl font-black">+</span>
               <div className="text-center">
-                <div className="text-lg font-black">MAX</div>
-                <div className="text-sm opacity-90">
+                <div className="text-sm sm:text-lg font-black">MAX</div>
+                <div className="text-xs sm:text-sm opacity-90">
                   {Math.floor(cash / stockData.price)} shares
                 </div>
               </div>
@@ -900,7 +901,7 @@ function App() {
           </div>
 
           {/* Sell Buttons */}
-          <div className="flex gap-2 flex-1">
+          <div className="contents sm:flex sm:gap-2 sm:flex-1">
             <button
               onClick={() => sellStock(1)}
               disabled={
@@ -909,16 +910,16 @@ function App() {
                 gameState === "ended" ||
                 shares === 0
               }
-              className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
                 gameState === "active" && shares > 0
                   ? "bg-orange-500 hover:bg-orange-600 text-white"
                   : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
-              <span className="text-xl font-black">−</span>
+              <span className="text-lg sm:text-xl font-black">−</span>
               <div className="text-center">
-                <div className="text-lg font-black">SELL 1</div>
-                <div className="text-sm opacity-90">
+                <div className="text-sm sm:text-lg font-black">SELL 1</div>
+                <div className="text-xs sm:text-sm opacity-90">
                   {formatCurrency(stockData.price)}
                 </div>
               </div>
@@ -932,16 +933,16 @@ function App() {
                 gameState === "ended" ||
                 shares < 5
               }
-              className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
                 gameState === "active" && shares >= 5
                   ? "bg-orange-600 hover:bg-orange-700 text-white"
                   : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
-              <span className="text-xl font-black">−</span>
+              <span className="text-lg sm:text-xl font-black">−</span>
               <div className="text-center">
-                <div className="text-lg font-black">SELL 5</div>
-                <div className="text-sm opacity-90">
+                <div className="text-sm sm:text-lg font-black">SELL 5</div>
+                <div className="text-xs sm:text-sm opacity-90">
                   {formatCurrency(stockData.price * 5)}
                 </div>
               </div>
@@ -955,25 +956,27 @@ function App() {
                 gameState === "ended" ||
                 shares === 0
               }
-              className={`flex items-center justify-center gap-2 font-bold py-4 px-4 rounded-2xl floating-button bounce-click flex-1 transition-all duration-200 ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
                 gameState === "active" && shares > 0
                   ? "bg-orange-700 hover:bg-orange-800 text-white"
                   : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
-              <span className="text-xl font-black">−</span>
+              <span className="text-lg sm:text-xl font-black">−</span>
               <div className="text-center">
-                <div className="text-lg font-black">ALL</div>
-                <div className="text-sm opacity-90">{shares} shares</div>
+                <div className="text-sm sm:text-lg font-black">ALL</div>
+                <div className="text-xs sm:text-sm opacity-90">
+                  {shares} shares
+                </div>
               </div>
             </button>
           </div>
         </div>
 
         {/* Game State Information Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 mb-8 game-tile">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-8 mb-4 sm:mb-8 game-tile">
           {/* Game Status */}
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             {/* Full Width Portfolio Progress Bar */}
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
@@ -1006,13 +1009,13 @@ function App() {
           </div>
 
           {/* Game Target Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2">
             <div className="text-center">
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
+              <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
                 Current Value
               </p>
               <p
-                className={`text-2xl font-black ${
+                className={`text-lg sm:text-2xl font-black ${
                   totalValue >= gameParameters.targetValue
                     ? "text-green-600 dark:text-green-400"
                     : totalValue >= gameParameters.startingCash
@@ -1025,10 +1028,10 @@ function App() {
             </div>
 
             <div className="text-center">
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
+              <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
                 Target Value
               </p>
-              <p className="text-2xl font-black text-green-600 dark:text-green-400">
+              <p className="text-lg sm:text-2xl font-black text-green-600 dark:text-green-400">
                 {formatCurrency(gameParameters.targetValue)}
               </p>
             </div>
@@ -1036,37 +1039,37 @@ function App() {
         </div>
 
         {/* Portfolio Information Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 game-tile">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-slate-700 dark:text-slate-300">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-8 game-tile">
+          <div className="flex items-center justify-between mb-3 sm:mb-6">
+            <h3 className="text-lg sm:text-2xl font-bold text-slate-700 dark:text-slate-300">
               Portfolio Summary
             </h3>
           </div>
 
           {totalSharesBought === 0 && (
-            <div className="bg-amber-50 dark:bg-slate-800 rounded-2xl p-6">
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
+            <div className="bg-amber-50 dark:bg-slate-800 rounded-2xl p-4 sm:p-6">
+              <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
                 No shares bought
               </p>
             </div>
           )}
 
           {totalSharesBought > 0 && (
-            <div className="bg-amber-50 dark:bg-slate-800 rounded-2xl p-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
+            <div className="bg-amber-50 dark:bg-slate-800 rounded-2xl p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
+                <div className="text-center sm:text-left">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     Lifetime Average Buy Price
                   </p>
-                  <p className="text-2xl font-black text-slate-700 dark:text-slate-300">
+                  <p className="text-lg sm:text-2xl font-black text-slate-700 dark:text-slate-300">
                     {formatCurrency(averageBuyPrice)}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                <div className="text-center sm:text-right">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     Lifetime Shares Bought
                   </p>
-                  <p className="text-2xl font-black text-slate-700 dark:text-slate-300">
+                  <p className="text-lg sm:text-2xl font-black text-slate-700 dark:text-slate-300">
                     {totalSharesBought}
                   </p>
                 </div>
