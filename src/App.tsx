@@ -641,14 +641,10 @@ function App() {
           <div className="bg-[#f2f2f2] dark:bg-slate-900 rounded-2xl p-3 sm:p-6 relative">
             {/* Countdown Overlay - Only over the chart */}
             {(gameState === "countdown" ||
-              (gameState === "pre-game" &&
-                hasPlayedToday &&
-                !showGameModal)) && (
+              (gameState === "pre-game" && !showGameModal)) && (
               <CountdownOverlay
                 countdownValue={countdownValue}
-                showStartButton={
-                  gameState === "pre-game" && hasPlayedToday && !showGameModal
-                }
+                showStartButton={gameState === "pre-game" && !showGameModal}
                 onStartClick={playAgain}
               />
             )}

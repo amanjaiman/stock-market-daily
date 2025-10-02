@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { StockSymbol, DateRange } from "../hooks";
 import type { GameParameters, ParPerformance } from "../utils/gameCalculations";
 
@@ -36,6 +36,18 @@ function EndGameModal({
 }: EndGameModalProps) {
   const [copySuccess, setCopySuccess] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
 
   // Calculate player's Profit Per Trade (PPT)
   const playerProfitPerTrade =
@@ -107,22 +119,28 @@ Play at tradle.game`;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 animate-in fade-in duration-300">
       {/* Backdrop */}
-      <div className="absolute inset-0 backdrop-blur-sm bg-opacity-50"></div>
+      <div
+        className="absolute inset-0 backdrop-blur-sm bg-opacity-50"
+        onClick={onClose}
+      ></div>
 
       {/* Modal */}
-      <div className="relative bg-[#f2f2f2] dark:bg-slate-900 border-1 border-gray-200 dark:border-gray-700 shadow-sm rounded-3xl p-4 sm:p-8 max-w-sm sm:max-w-md w-full max-h-full overflow-y-auto my-4 transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4 duration-500 ease-out">
+      <div
+        className="relative bg-[#f2f2f2] dark:bg-slate-900 border-1 border-gray-200 dark:border-gray-700 shadow-sm rounded-3xl p-4 sm:p-8 max-w-sm sm:max-w-md w-full max-h-full overflow-y-auto my-4 transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4 duration-500 ease-out"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Results Summary */}
-        <div className="space-y-8 mb-8">
+        <div className="space-y-4 sm:space-y-8 mb-6 sm:mb-8">
           {/* Stock Reveal - Main Focus */}
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-8">
             <div className="text-center">
-              <div className="text-4xl font-black text-slate-800 dark:text-slate-200 mb-2">
+              <div className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-slate-200 mb-2">
                 {stockInfo.symbol}
               </div>
-              <div className="text-lg text-slate-600 dark:text-slate-400 font-semibold">
+              <div className="text-base sm:text-lg text-slate-600 dark:text-slate-400 font-semibold">
                 {stockInfo.name}
               </div>
-              <div className="text-slate-500 dark:text-slate-400">
+              <div className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
                 {stockInfo.sector} •{" "}
                 {new Date(dateRange.startDate).getFullYear()}-
                 {new Date(dateRange.endDate).getFullYear()}
@@ -131,13 +149,13 @@ Play at tradle.game`;
           </div>
 
           {/* Share Section - Secondary Focus */}
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8">
-            <h2 className="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4 text-center">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-8">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-700 dark:text-slate-300 mb-3 sm:mb-4 text-center">
               Share Your Result
             </h2>
 
             {/* Performance Emojis Preview */}
-            <div className="flex justify-center gap-6 mb-6">
+            <div className="flex justify-center gap-4 sm:gap-6 mb-4 sm:mb-6">
               <div className="text-center">
                 <div className="text-lg mb-1">
                   {playerStats.totalSharesBought === 0
@@ -147,7 +165,7 @@ Play at tradle.game`;
                     ? "🟩"
                     : "🟥"}
                 </div>
-                <div className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
+                <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold">
                   Buy Price
                 </div>
               </div>
@@ -160,7 +178,7 @@ Play at tradle.game`;
                     ? "🟩"
                     : "🟥"}
                 </div>
-                <div className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
+                <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold">
                   PPT
                 </div>
               </div>
@@ -170,20 +188,20 @@ Play at tradle.game`;
                     ? "✅"
                     : "❌"}
                 </div>
-                <div className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
+                <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold">
                   Target
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-4 justify-center">
+            <div className="flex gap-3 sm:gap-4 justify-center">
               <button
                 onClick={async () => {
                   await navigator.clipboard.writeText(generateShareText());
                   setCopySuccess(true);
                   setTimeout(() => setCopySuccess(false), 2000);
                 }}
-                className={`font-medium py-4 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 ${
+                className={`font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 text-sm sm:text-base ${
                   copySuccess
                     ? "bg-green-500 text-white"
                     : "bg-slate-600 hover:bg-slate-700 text-white"
@@ -194,7 +212,7 @@ Play at tradle.game`;
 
               <button
                 onClick={onLeaderboardClick}
-                className="font-medium py-4 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white"
+                className="font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white text-sm sm:text-base"
               >
                 Leaderboard
               </button>
@@ -205,7 +223,7 @@ Play at tradle.game`;
           <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden">
             <button
               onClick={() => setDetailsExpanded(!detailsExpanded)}
-              className="w-full px-6 py-4 text-left hover:bg-[#e6e6e6] dark:hover:bg-slate-700 transition-colors duration-200 group"
+              className="w-full px-4 sm:px-6 py-3 sm:py-4 text-left hover:bg-[#e6e6e6] dark:hover:bg-slate-700 transition-colors duration-200 group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 flex items-center justify-center">
@@ -225,7 +243,7 @@ Play at tradle.game`;
                     />
                   </svg>
                 </div>
-                <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">
+                <h3 className="text-base sm:text-lg font-bold text-slate-700 dark:text-slate-300">
                   Detailed Results
                 </h3>
               </div>
@@ -235,7 +253,7 @@ Play at tradle.game`;
                 detailsExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
               }`}
             >
-              <div className="px-8 pb-8 pt-1">
+              <div className="px-4 sm:px-8 pb-4 sm:pb-8 pt-1">
                 <div className="grid grid-cols-2 gap-6 text-sm mb-6">
                   <div className="text-center">
                     <p className="text-slate-500 dark:text-slate-400 text-sm mb-1 font-semibold">
@@ -332,16 +350,16 @@ Play at tradle.game`;
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-center gap-4">
+        <div className="flex justify-center gap-3 sm:gap-4">
           <button
             onClick={onClose}
-            className="font-medium py-4 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-slate-600 hover:bg-slate-700 text-white"
+            className="font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-slate-600 hover:bg-slate-700 text-white text-sm sm:text-base"
           >
             Close
           </button>
           <button
             onClick={onClose}
-            className="font-medium py-4 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            className="font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white text-sm sm:text-base"
           >
             Play again
           </button>

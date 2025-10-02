@@ -26,7 +26,7 @@ interface GameModalProps {
   onResultsClick?: () => void;
 }
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Tooltip from "./Tooltip";
 
 function GameModal({
@@ -45,6 +45,19 @@ function GameModal({
   onResultsClick,
 }: GameModalProps) {
   const [rulesExpanded, setRulesExpanded] = useState(false);
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -62,6 +75,12 @@ function GameModal({
           : "animate-in fade-in duration-300"
       }`}
     >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 backdrop-blur-sm bg-opacity-50"
+        onClick={onClose}
+      ></div>
+
       {/* Modal */}
       <div
         className={`relative bg-[#f2f2f2] dark:bg-slate-900 border-1 border-gray-200 dark:border-gray-700 shadow-sm rounded-3xl p-4 sm:p-8 max-w-sm sm:max-w-md w-full max-h-full overflow-y-auto my-4 transition-all duration-300 ${
@@ -69,10 +88,11 @@ function GameModal({
             ? "animate-out zoom-out-95 slide-out-to-bottom-4 duration-200"
             : "animate-in zoom-in-95 slide-in-from-bottom-4 duration-500 ease-out"
         }`}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="game-title text-3xl font-black text-slate-700 dark:text-slate-300 mb-2">
+        <div className="text-center mb-4 sm:mb-6">
+          <h1 className="game-title text-2xl sm:text-3xl font-black text-slate-700 dark:text-slate-300 mb-2">
             Day
             <span className="game-title text-green-600 dark:text-green-400">
               Tradle
@@ -128,51 +148,51 @@ function GameModal({
         </div>
 
         {/* Rules */}
-        <div className="space-y-8 mb-8">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8">
-            <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-3">
+        <div className="space-y-4 sm:space-y-8 mb-6 sm:mb-8">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-8">
+            <h3 className="text-base sm:text-lg font-bold text-slate-700 dark:text-slate-300 mb-3">
               Today's Challenge
             </h3>
-            <div className="space-y-5">
-              <div className="grid grid-cols-3 gap-3 text-sm">
+            <div className="space-y-3 sm:space-y-5">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 text-sm">
                 <div>
-                  <p className="text-slate-500 dark:text-slate-400 font-semibold">
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold">
                     Cash
                   </p>
-                  <p className="text-lg font-black text-slate-700 dark:text-slate-300">
+                  <p className="text-sm sm:text-lg font-black text-slate-700 dark:text-slate-300">
                     {formatCurrency(startingCash)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-500 dark:text-slate-400 font-semibold">
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold">
                     Stock Price
                   </p>
-                  <p className="text-lg font-black text-green-600 dark:text-green-400">
+                  <p className="text-sm sm:text-lg font-black text-green-600 dark:text-green-400">
                     ${startingStockPrice}
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-500 dark:text-slate-400 font-semibold">
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold">
                     Shares
                   </p>
-                  <p className="text-lg font-black text-slate-700 dark:text-slate-300">
+                  <p className="text-sm sm:text-lg font-black text-slate-700 dark:text-slate-300">
                     0
                   </p>
                 </div>
               </div>
               <div className="text-sm">
-                <p className="text-slate-500 dark:text-slate-400 font-semibold">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold">
                   Stock Category
                 </p>
-                <p className="text-lg font-black text-slate-700 dark:text-slate-300">
+                <p className="text-base sm:text-lg font-black text-slate-700 dark:text-slate-300">
                   {stockInfo?.sector || "Mystery"}
                 </p>
               </div>
               <div className="text-sm">
-                <p className="text-slate-500 dark:text-slate-400 font-semibold">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold">
                   Time Period
                 </p>
-                <p className="text-lg font-black text-slate-700 dark:text-slate-300">
+                <p className="text-base sm:text-lg font-black text-slate-700 dark:text-slate-300">
                   {dateRange
                     ? `${new Date(
                         dateRange.startDate
@@ -185,18 +205,18 @@ function GameModal({
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8">
-            <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-8">
+            <h3 className="text-base sm:text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">
               🎯 Target Portfolio Value
             </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-2">
               Grow your total portfolio value to:
             </p>
-            <p className="text-3xl font-black text-green-600 dark:text-green-400">
+            <p className="text-2xl sm:text-3xl font-black text-green-600 dark:text-green-400">
               {formatCurrency(targetValue)}
             </p>
             {targetReturnPercentage && (
-              <p className="text-sm text-green-700 dark:text-green-300 font-semibold mt-2">
+              <p className="text-xs sm:text-sm text-green-700 dark:text-green-300 font-semibold mt-2">
                 Target Return: +{targetReturnPercentage.toFixed(1)}%
               </p>
             )}
@@ -206,7 +226,7 @@ function GameModal({
         <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden">
           <button
             onClick={() => setRulesExpanded(!rulesExpanded)}
-            className="w-full px-6 py-4 text-left hover:bg-[#e6e6e6] dark:hover:bg-slate-700 transition-colors duration-200 group"
+            className="w-full px-4 sm:px-6 py-3 sm:py-4 text-left hover:bg-[#e6e6e6] dark:hover:bg-slate-700 transition-colors duration-200 group"
           >
             <div className="flex items-center gap-3">
               <div className="w-5 h-5 flex items-center justify-center">
@@ -226,7 +246,7 @@ function GameModal({
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">
+              <h3 className="text-base sm:text-lg font-bold text-slate-700 dark:text-slate-300">
                 Game Rules
               </h3>
             </div>
@@ -236,8 +256,8 @@ function GameModal({
               rulesExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
             }`}
           >
-            <div className="px-8 pb-8 pt-1">
-              <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+            <div className="px-4 sm:px-8 pb-4 sm:pb-8 pt-1">
+              <ul className="space-y-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                 <li className="flex items-start gap-2">
                   <span className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></span>
                   <span>
@@ -272,24 +292,24 @@ function GameModal({
 
         {/* Action Buttons */}
         {hasPlayedToday ? (
-          <div className="flex justify-center gap-4 mt-8">
+          <div className="flex justify-center gap-3 sm:gap-4 mt-6 sm:mt-8">
             <button
               onClick={onClose}
-              className="font-medium py-4 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-slate-600 hover:bg-slate-700 text-white"
+              className="font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-slate-600 hover:bg-slate-700 text-white text-sm sm:text-base"
             >
               Close
             </button>
             <button
               onClick={onPlayAgain}
-              className="font-medium py-4 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+              className="font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white text-sm sm:text-base"
             >
-              Play again
+              Play Again
             </button>
           </div>
         ) : (
           <button
             onClick={onStart}
-            className="mt-8 w-full font-medium text-lg py-4 px-8 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            className="mt-6 sm:mt-8 w-full font-medium text-base sm:text-lg py-3 sm:py-4 px-6 sm:px-8 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
           >
             Start Challenge
           </button>
