@@ -1,10 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 interface HeaderProps {
   onLeaderboardClick?: () => void;
   onResultsClick?: () => void;
   onHelpClick?: () => void;
-  onSettingsClick?: () => void;
   gameState?: "pre-game" | "countdown" | "active" | "ended";
   hasPlayedToday?: boolean;
 }
@@ -13,10 +12,32 @@ const Header: React.FC<HeaderProps> = ({
   onLeaderboardClick,
   onResultsClick,
   onHelpClick,
-  onSettingsClick,
   gameState,
   hasPlayedToday = false,
 }) => {
+  const [isDark, setIsDark] = useState(() => {
+    // Check localStorage first, then system preference
+    const stored = localStorage.getItem("theme");
+    if (stored) {
+      return stored === "dark";
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
+
+  useEffect(() => {
+    // Apply theme to root element
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => {
+    setIsDark(!isDark);
+  };
   return (
     <header className="w-full bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
       <div className="max-w-6xl mx-auto px-6 py-4">
@@ -112,31 +133,43 @@ const Header: React.FC<HeaderProps> = ({
               </svg>
             </button>
 
-            {/* Settings */}
+            {/* Theme Toggle */}
             <button
-              onClick={onSettingsClick}
+              onClick={toggleTheme}
               className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200 group"
-              title="Settings"
+              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
-              <svg
-                className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
+              {isDark ? (
+                // Sun icon for light mode
+                <svg
+                  className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                  />
+                </svg>
+              ) : (
+                // Moon icon for dark mode
+                <svg
+                  className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                  />
+                </svg>
+              )}
             </button>
           </div>
         </div>

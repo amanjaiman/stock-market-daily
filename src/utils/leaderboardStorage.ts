@@ -137,12 +137,12 @@ export const saveLeaderboardEntry = async (
         num_tries: existingEntry.num_tries + 1,
       };
       console.log("Updated best score for day", day, ":", finalValue);
-      shouldUpdateSupabase = true; // Only update Supabase when score improves
+      shouldUpdateSupabase = true;
     } else {
-      // Just increment num_tries locally, don't update Supabase
+      // Increment num_tries even if score didn't improve
       currentDayEntries[existingEntryIndex].num_tries += 1;
-      console.log("Incremented tries for day", day, "to", currentDayEntries[existingEntryIndex].num_tries, "(local only - score not improved)");
-      // shouldUpdateSupabase remains false
+      console.log("Incremented tries for day", day, "to", currentDayEntries[existingEntryIndex].num_tries);
+      shouldUpdateSupabase = true; // Always update to sync num_tries
     }
     updatedEntries = currentDayEntries;
   } else {

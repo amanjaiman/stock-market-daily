@@ -494,11 +494,6 @@ function App() {
     setShowGameModal(true);
   };
 
-  const handleSettingsClick = () => {
-    console.log("Settings clicked");
-    // TODO: Implement settings functionality
-  };
-
   return (
     <div className="min-h-screen bg-[#f2f2f2] dark:bg-slate-900">
       {/* Global Header */}
@@ -506,13 +501,12 @@ function App() {
         onLeaderboardClick={handleLeaderboardClick}
         onResultsClick={handleResultsClick}
         onHelpClick={handleHelpClick}
-        onSettingsClick={handleSettingsClick}
         gameState={gameState}
         hasPlayedToday={hasPlayedToday}
       />
 
       {/* Single Vertical Panel */}
-      <div className="max-w-4xl mx-auto p-8">
+      <div className="max-w-4xl mx-auto p-7">
         {/* Chart Section */}
         <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 mb-8 game-tile">
           <div className="mb-6">
