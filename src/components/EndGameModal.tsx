@@ -106,7 +106,7 @@ Final Value: ${formatCurrency(playerStats.finalValue)} (${
         : ""
     }
 
-Play at tradle.game`;
+Play at daytradle.com`;
 
     return shareText;
   };

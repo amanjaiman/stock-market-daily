@@ -51,8 +51,6 @@ export const useDailyChallenge = (): UseDailyChallengeResult => {
       
       const today = new Date().toISOString().split('T')[0];
       
-      console.log('Fetching daily challenge for:', today);
-      
       const { data, error: fetchError } = await supabase
         .from('daily_challenges')
         .select('*')
@@ -104,15 +102,6 @@ export const useDailyChallenge = (): UseDailyChallengeResult => {
         priceData: data.price_data as CondensedDataPoint[],
         createdAt: data.created_at,
       };
-
-      console.log('Successfully loaded daily challenge:', {
-        day: transformedChallenge.day,
-        stock: transformedChallenge.tickerSymbol,
-        company: transformedChallenge.companyName,
-        priceDataPoints: transformedChallenge.priceData.length,
-        startingCash: transformedChallenge.startingCash,
-        targetValue: transformedChallenge.targetValue,
-      });
 
       setChallenge(transformedChallenge);
       

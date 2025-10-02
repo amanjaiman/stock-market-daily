@@ -62,7 +62,6 @@ export const saveUserName = (name: string): void => {
   
   if (updated) {
     localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries));
-    console.log("Updated all Anonymous entries with name:", trimmedName);
   }
 };
 
@@ -109,11 +108,6 @@ export const saveLeaderboardEntry = async (
   
   // Remove entries from different days (only keep current day)
   const currentDayEntries = entries.filter((entry) => entry.day === day);
-  const removedCount = entries.length - currentDayEntries.length;
-  
-  if (removedCount > 0) {
-    console.log(`Removed ${removedCount} old entry(ies) from previous day(s)`);
-  }
 
   const existingEntryIndex = currentDayEntries.findIndex((entry) => entry.day === day);
 
@@ -136,12 +130,10 @@ export const saveLeaderboardEntry = async (
         ppt: ppt,
         num_tries: existingEntry.num_tries + 1,
       };
-      console.log("Updated best score for day", day, ":", finalValue);
       shouldUpdateSupabase = true;
     } else {
       // Increment num_tries even if score didn't improve
       currentDayEntries[existingEntryIndex].num_tries += 1;
-      console.log("Incremented tries for day", day, "to", currentDayEntries[existingEntryIndex].num_tries);
       shouldUpdateSupabase = true; // Always update to sync num_tries
     }
     updatedEntries = currentDayEntries;
@@ -156,7 +148,6 @@ export const saveLeaderboardEntry = async (
       ppt: ppt,
       num_tries: 1,
     }];
-    console.log("Created new entry for day", day, ":", finalValue);
     isNewEntry = true;
     shouldUpdateSupabase = true;
   }
@@ -180,12 +171,11 @@ export const saveLeaderboardEntry = async (
 
       if (newUUID) {
         saveUserUUID(newUUID);
-        console.log("Created new Supabase entry with UUID:", newUUID);
       }
     } else if (shouldUpdateSupabase && userUUID) {
       // Update existing entry in Supabase
       const currentEntry = updatedEntries[existingEntryIndex];
-      const success = await updateLeaderboardEntry(userUUID, {
+      await updateLeaderboardEntry(userUUID, {
         name: userName,
         final_value: currentEntry.final_value,
         percentage_change_of_value: currentEntry.percentage_change_of_value,
@@ -193,14 +183,9 @@ export const saveLeaderboardEntry = async (
         ppt: currentEntry.ppt,
         num_tries: currentEntry.num_tries,
       });
-
-      if (success) {
-        console.log("Updated Supabase entry:", userUUID);
-      }
     } else if (shouldUpdateSupabase && !userUUID) {
       // We have a local entry but no UUID - check if we can find it in Supabase
       // or create a new one
-      console.log("No UUID found, creating new Supabase entry");
       const currentEntry = updatedEntries[existingEntryIndex];
       const newUUID = await createLeaderboardEntry({
         day: currentEntry.day,
@@ -214,7 +199,6 @@ export const saveLeaderboardEntry = async (
 
       if (newUUID) {
         saveUserUUID(newUUID);
-        console.log("Created new Supabase entry with UUID:", newUUID);
       }
     }
   } catch (error) {

@@ -36,8 +36,6 @@ export const fetchStockData = async (
     url.searchParams.set("endDate", endDate);
     url.searchParams.set("token", TIINGO_API_KEY);
 
-    console.log(`Fetching stock data for ${symbol} from ${startDate} to ${endDate}`);
-
     const response = await fetch(url.toString());
 
     if (!response.ok) {
@@ -69,7 +67,6 @@ export const fetchStockData = async (
       throw new Error(`Insufficient price data received: ${prices.length} points`);
     }
 
-    console.log(`Successfully fetched ${prices.length} data points for ${symbol}`);
     return prices;
 
   } catch (err) {
@@ -77,7 +74,6 @@ export const fetchStockData = async (
     
     // Use fallback data on error
     const fallbackData = generateFallbackData(symbol, startDate, endDate);
-    console.log(`Using fallback data for ${symbol}: ${fallbackData.length} points`);
     return fallbackData;
   }
 };

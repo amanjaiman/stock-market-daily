@@ -136,8 +136,6 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Starting stock seed process...');
-    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -156,8 +154,6 @@ serve(async (req) => {
       console.error('Database error:', error);
       throw error;
     }
-
-    console.log(`Successfully seeded ${data?.length || TOP_STOCKS.length} stocks`);
 
     return new Response(
       JSON.stringify({ 

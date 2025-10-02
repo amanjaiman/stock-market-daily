@@ -139,13 +139,6 @@ function App() {
       }
 
       setIsDataReady(true);
-      console.log("Game data initialized from daily challenge:", {
-        stock: challenge.tickerSymbol,
-        company: challenge.companyName,
-        priceDataPoints: challenge.priceData.length,
-        startingCash: challenge.startingCash,
-        targetValue: challenge.targetValue,
-      });
 
       // Check if user has already played today
       const todayEntry = getEntryForDay(challenge.day);
@@ -268,18 +261,6 @@ function App() {
         totalSharesBought > 0
           ? (finalValue - gameParameters.startingCash) / totalSharesBought
           : 0;
-
-      console.log("Game ended - saving results:", {
-        day: challenge.day,
-        finalValue,
-        cash,
-        shares,
-        stockPrice: stockData.price,
-        totalSharesBought,
-        averageBuyPrice,
-        percentageChange,
-        playerProfitPerTrade,
-      });
 
       // Save to localStorage and Supabase
       saveLeaderboardEntry(
@@ -475,12 +456,10 @@ function App() {
 
   // Header button handlers
   const handleLeaderboardClick = () => {
-    console.log("Leaderboard clicked");
     setShowLeaderboardModal(true);
   };
 
   const handleResultsClick = () => {
-    console.log("Results/Share clicked");
     if (gameState === "ended" || hasPlayedToday) {
       setShowEndGameModal(true);
     }

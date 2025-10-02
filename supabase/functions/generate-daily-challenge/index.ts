@@ -60,8 +60,6 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Starting daily challenge generation...');
-    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -76,7 +74,6 @@ serve(async (req) => {
       .single();
 
     if (existingChallenge) {
-      console.log(`Challenge already exists for ${today}, day ${existingChallenge.day}`);
       return new Response(
         JSON.stringify({ 
           success: true,
@@ -97,7 +94,6 @@ serve(async (req) => {
       .single();
     
     const nextDay = (lastChallenge?.day || 0) + 1;
-    console.log(`Generating challenge for day ${nextDay}`);
 
     // Get all available stocks
     const { data: allStocks, error: stocksError } = await supabase
@@ -108,12 +104,9 @@ serve(async (req) => {
       throw new Error('No stocks found in database. Please run seed-stocks first.');
     }
 
-    console.log(`Found ${allStocks.length} stocks in database`);
-
     // 1. Pick random stock based on today's seed
     const seed = getDailySeed();
     const selectedStock = getRandomStockWithSeed(allStocks, seed);
-    console.log(`Selected stock: ${selectedStock.symbol} (${selectedStock.name})`);
 
     // 2. Generate random date range (deterministic based on seed)
     let dateRange: DateRange;
@@ -128,7 +121,6 @@ serve(async (req) => {
 
     // If we still don't have a valid range, create a fallback
     if (!isValidDateRange(dateRange)) {
-      console.log('Using fallback date range');
       const endDate = new Date(2023, 11, 31); // Dec 31, 2023
       const startDate = new Date(2021, 11, 31); // Dec 31, 2021
 
@@ -139,8 +131,6 @@ serve(async (req) => {
       };
     }
 
-    console.log(`Date range: ${dateRange.startDate} to ${dateRange.endDate} (${dateRange.days} days)`);
-
     // 3. Fetch real stock data
     const rawPrices: RawStockPrice[] = await fetchStockData(
       selectedStock.symbol, 
@@ -148,19 +138,14 @@ serve(async (req) => {
       dateRange.endDate
     );
 
-    console.log(`Fetched ${rawPrices.length} price data points`);
-
     // 4. Condense data to 300 points
     const condensedData = condenseStockData(rawPrices);
-    console.log(`Condensed to ${condensedData.length} data points`);
 
     // 5. Calculate game parameters
     const gameParams: GameParameters = calculateGameParameters(condensedData);
-    console.log('Game parameters calculated:', gameParams);
 
     // 6. Calculate par performance
     const parPerformance: ParPerformance = calculateParPerformance(condensedData, gameParams);
-    console.log('Par performance calculated:', parPerformance);
 
     // 7. Prepare challenge data for database
     const challengeData: DailyChallengeData = {
@@ -199,8 +184,6 @@ serve(async (req) => {
       console.error('Database insertion error:', insertError);
       throw insertError;
     }
-
-    console.log(`Successfully created daily challenge for day ${nextDay}`);
 
     return new Response(
       JSON.stringify({ 
