@@ -1130,6 +1130,7 @@ function App() {
       {/* Leaderboard Modal */}
       {showLeaderboardModal && (
         <LeaderboardModal
+          key={Date.now()}
           onClose={() => {
             setShowLeaderboardModal(false);
           }}
