@@ -79,6 +79,7 @@ function App() {
   const [showEndGameModal, setShowEndGameModal] = useState(false);
   const [isModalClosing, setIsModalClosing] = useState(false);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
+  const [showGameModal, setShowGameModal] = useState(true); // Will be updated based on hasPlayedToday
   const [hasPlayedToday, setHasPlayedToday] = useState(false);
 
   // Initialize game data from daily challenge
@@ -148,7 +149,11 @@ function App() {
 
       // Check if user has already played today
       const todayEntry = getEntryForDay(challenge.day);
-      setHasPlayedToday(todayEntry !== null);
+      const playedToday = todayEntry !== null;
+      setHasPlayedToday(playedToday);
+
+      // Only show game modal by default if user hasn't played today
+      setShowGameModal(!playedToday);
     } catch (error) {
       console.error("Error initializing game data from challenge:", error);
     }
@@ -319,6 +324,31 @@ function App() {
     }, 200); // Match the fade-out duration
   };
 
+  const playAgain = () => {
+    // Reset all game state
+    setCash(gameParameters.startingCash);
+    setShares(gameParameters.startingShares);
+    setAverageBuyPrice(0);
+    setTotalSharesBought(0);
+    setCurrentHoldingsAvgPrice(0);
+    setPriceHistory([gameParameters.initialStockPrice]);
+    setStockData({
+      price: gameParameters.initialStockPrice,
+      change: 0,
+      percentChange: 0,
+    });
+    previousPrice.current = gameParameters.initialStockPrice;
+
+    // Close the modal and start the game
+    setShowGameModal(false);
+    setShowEndGameModal(false);
+
+    // Start the game after a brief delay
+    setTimeout(() => {
+      startGame();
+    }, 100);
+  };
+
   // Show error state when challenge fails to load
   useEffect(() => {
     if (challengeError) {
@@ -450,7 +480,7 @@ function App() {
 
   const handleResultsClick = () => {
     console.log("Results/Share clicked");
-    if (gameState === "ended") {
+    if (gameState === "ended" || hasPlayedToday) {
       setShowEndGameModal(true);
     }
   };
@@ -461,8 +491,7 @@ function App() {
   };
 
   const handleHelpClick = () => {
-    console.log("Help clicked");
-    // TODO: Implement help/tutorial functionality
+    setShowGameModal(true);
   };
 
   const handleSettingsClick = () => {
@@ -616,8 +645,17 @@ function App() {
           {/* Price Chart */}
           <div className="bg-[#f2f2f2] dark:bg-slate-900 rounded-2xl p-6 relative">
             {/* Countdown Overlay - Only over the chart */}
-            {gameState === "countdown" && (
-              <CountdownOverlay countdownValue={countdownValue} />
+            {(gameState === "countdown" ||
+              (gameState === "pre-game" &&
+                hasPlayedToday &&
+                !showGameModal)) && (
+              <CountdownOverlay
+                countdownValue={countdownValue}
+                showStartButton={
+                  gameState === "pre-game" && hasPlayedToday && !showGameModal
+                }
+                onStartClick={playAgain}
+              />
             )}
             <div className="relative h-64 overflow-hidden">
               <svg
@@ -1064,28 +1102,27 @@ function App() {
         )}
 
       {/* Game Modal - Only show when data is fully loaded */}
-      {gameState === "pre-game" &&
-        !challengeLoading &&
-        isDataReady &&
-        challenge && (
-          <GameModal
-            startingCash={gameParameters.startingCash}
-            startingStockPrice={gameParameters.initialStockPrice}
-            targetValue={gameParameters.targetValue}
-            targetReturnPercentage={gameParameters.targetReturnPercentage}
-            onStart={startGame}
-            stockInfo={currentStock}
-            dateRange={{
-              startDate: challenge.startDate,
-              endDate: challenge.endDate,
-              days: challenge.tradingDays,
-            }}
-            isClosing={isModalClosing}
-            hasPlayedToday={hasPlayedToday}
-            onLeaderboardClick={handleLeaderboardClick}
-            onResultsClick={handleResultsClick}
-          />
-        )}
+      {showGameModal && !challengeLoading && isDataReady && challenge && (
+        <GameModal
+          startingCash={gameParameters.startingCash}
+          startingStockPrice={gameParameters.initialStockPrice}
+          targetValue={gameParameters.targetValue}
+          targetReturnPercentage={gameParameters.targetReturnPercentage}
+          onStart={startGame}
+          onPlayAgain={playAgain}
+          onClose={() => setShowGameModal(false)}
+          stockInfo={currentStock}
+          dateRange={{
+            startDate: challenge.startDate,
+            endDate: challenge.endDate,
+            days: challenge.tradingDays,
+          }}
+          isClosing={isModalClosing}
+          hasPlayedToday={hasPlayedToday}
+          onLeaderboardClick={handleLeaderboardClick}
+          onResultsClick={handleResultsClick}
+        />
+      )}
 
       {/* End Game Modal */}
       {showEndGameModal && currentStock && challenge && parPerformance && (
@@ -1126,10 +1163,10 @@ function App() {
         />
       )}
 
-      {/* Blur overlay when not active */}
+      {/* Blur overlay when modal is visible */}
       <div
         className={`fixed inset-0 transition-all duration-300 pointer-events-none ${
-          gameState === "pre-game" ? "backdrop-blur-sm" : ""
+          showGameModal ? "backdrop-blur-sm" : ""
         }`}
       />
     </div>

@@ -16,6 +16,8 @@ interface GameModalProps {
   targetValue: number;
   targetReturnPercentage?: number;
   onStart: () => void;
+  onPlayAgain: () => void;
+  onClose: () => void;
   stockInfo?: StockInfo | null;
   dateRange?: DateRange | null;
   isClosing?: boolean;
@@ -33,6 +35,8 @@ function GameModal({
   targetValue,
   targetReturnPercentage,
   onStart,
+  onPlayAgain,
+  onClose,
   stockInfo,
   dateRange,
   isClosing = false,
@@ -266,13 +270,30 @@ function GameModal({
           </div>
         </div>
 
-        {/* Start Button */}
-        <button
-          onClick={onStart}
-          className="mt-8 w-full font-medium text-lg py-4 px-8 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
-        >
-          Start Challenge
-        </button>
+        {/* Action Buttons */}
+        {hasPlayedToday ? (
+          <div className="flex justify-center gap-4 mt-8">
+            <button
+              onClick={onClose}
+              className="font-medium py-4 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-slate-600 hover:bg-slate-700 text-white"
+            >
+              Close
+            </button>
+            <button
+              onClick={onPlayAgain}
+              className="font-medium py-4 px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+            >
+              Play again
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={onStart}
+            className="mt-8 w-full font-medium text-lg py-4 px-8 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
+          >
+            Start Challenge
+          </button>
+        )}
       </div>
     </div>
   );
