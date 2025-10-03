@@ -631,8 +631,8 @@ function App() {
         </div>
 
         {/* Chart Section */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-8 mb-4 sm:mb-8 game-tile order-2">
-          <div className="mb-3 sm:mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-3 sm:p-8 mb-4 sm:mb-8 game-tile order-2">
+          <div className="mb-2 sm:mb-6">
             {gameState !== "ended" && (
               <h3 className="text-lg sm:text-2xl font-bold text-slate-700 dark:text-slate-300">
                 Category: {currentStock?.sector || "Mystery"}
@@ -659,7 +659,7 @@ function App() {
           </div>
 
           {/* Price Display - Full Width */}
-          <div className="mb-4 sm:mb-8">
+          <div className="mb-3 sm:mb-8">
             <div className="flex items-start justify-between mb-2 sm:mb-4">
               <div className="flex-1">
                 {/* Mobile: Price and percentage on same line */}
@@ -771,7 +771,7 @@ function App() {
           </div>
 
           {/* Price Chart */}
-          <div className="bg-[#f2f2f2] dark:bg-slate-900 rounded-2xl p-3 sm:p-6 relative m-[-8px] sm:m-0">
+          <div className="bg-[#f2f2f2] dark:bg-slate-900 rounded-2xl p-2 sm:p-6 relative m-[-8px] sm:m-0">
             {/* Countdown Overlay - Only over the chart */}
             {(gameState === "countdown" ||
               (gameState === "pre-game" && !showGameModal)) && (
@@ -787,7 +787,7 @@ function App() {
                 {formatCurrency(priceRange.max)}
               </span>
             </div>
-            <div className="relative h-64 overflow-hidden">
+            <div className="relative h-48 sm:h-64 overflow-hidden">
               {/* Mobile Chart - Full Width */}
               <svg
                 className="w-full h-full sm:hidden"
@@ -1010,7 +1010,7 @@ function App() {
                 {formatCurrency(priceRange.min)}
               </span>
             </div>
-            <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 text-xs sm:text-base text-slate-500 font-semibold mt-3 sm:mt-6">
+            <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 text-xs sm:text-base text-slate-500 font-semibold mt-2 sm:mt-6">
               <span className="hidden sm:inline text-slate-500 dark:text-slate-400">
                 <span className="font-bold">10s Range:</span>{" "}
                 <span className="font-semibold">
