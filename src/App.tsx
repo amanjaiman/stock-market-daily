@@ -390,13 +390,16 @@ function App() {
   };
 
   // Chart layout and styling helpers
-  const plotLeft = 64;
+  // Use different plotLeft for mobile (8px) vs desktop (64px) to accommodate y-axis labels
+  const plotLeft = 64; // Desktop: space for y-axis labels on the left
+  const plotLeftMobile = 8; // Mobile: minimal padding, labels go above/below
   const plotRight = 8;
   const plotTop = 8;
   const plotHeight = 240; // total SVG height 256 with 8 padding top/bottom
   const plotWidth = 800 - plotLeft - plotRight;
+  const plotWidthMobile = 800 - plotLeftMobile - plotRight;
   const bottomY = 256 - plotTop; // 248
-  const axisX = plotLeft - 8; // y-axis outside the grid
+  const axisX = plotLeft - 8; // y-axis outside the grid (desktop only)
 
   const numRecent = recentPrices.length;
   const lastTenChange =
@@ -419,6 +422,8 @@ function App() {
     ((price - priceRange.min) / (priceRange.max - priceRange.min || 1)) *
       plotHeight -
     plotTop;
+
+  // Desktop functions
   const xFor = (index: number) =>
     plotLeft + (index / Math.max(1, numRecent - 1)) * plotWidth;
 
@@ -435,6 +440,28 @@ function App() {
           .join(" ")} L ${
           coords[coords.length - 1][0]
         },${bottomY} L ${plotLeft},${bottomY} Z`
+      : undefined;
+
+  // Mobile functions
+  const xForMobile = (index: number) =>
+    plotLeftMobile + (index / Math.max(1, numRecent - 1)) * plotWidthMobile;
+
+  const linePointsMobile = recentPrices
+    .map((price, index) => `${xForMobile(index)},${yFor(price)}`)
+    .join(" ");
+
+  const coordsMobile = recentPrices.map((price, index) => [
+    xForMobile(index),
+    yFor(price),
+  ]);
+  const areaPathDMobile =
+    coordsMobile.length > 1
+      ? `M ${coordsMobile[0][0]},${coordsMobile[0][1]} ${coordsMobile
+          .slice(1)
+          .map((c) => `L ${c[0]},${c[1]}`)
+          .join(" ")} L ${
+          coordsMobile[coordsMobile.length - 1][0]
+        },${bottomY} L ${plotLeftMobile},${bottomY} Z`
       : undefined;
 
   const formatCurrency = (amount: number) => {
@@ -518,13 +545,24 @@ function App() {
           {/* Price Display - Full Width */}
           <div className="mb-4 sm:mb-8">
             <div className="flex items-start justify-between mb-2 sm:mb-4">
-              <div>
-                <div className="mb-2 sm:mb-3">
+              <div className="flex-1">
+                {/* Mobile: Price and percentage on same line */}
+                <div className="flex items-baseline gap-3 mb-2 sm:mb-3 sm:block">
                   <span className="text-3xl sm:text-5xl font-black text-slate-700 dark:text-slate-300">
                     {formatCurrency(stockData.price)}
                   </span>
+                  <span
+                    className={`text-lg sm:hidden font-bold ${
+                      stockData.change >= 0
+                        ? "text-green-500 dark:text-green-400"
+                        : "text-orange-500 dark:text-orange-400"
+                    }`}
+                  >
+                    {formatChange(stockData.percentChange, true)}
+                  </span>
                 </div>
-                <div className="flex items-center gap-4">
+                {/* Desktop: Chevron and percentage below price */}
+                <div className="hidden sm:flex items-center gap-4">
                   <div className="flex items-center gap-1">
                     <div
                       className={`${
@@ -617,7 +655,7 @@ function App() {
           </div>
 
           {/* Price Chart */}
-          <div className="bg-[#f2f2f2] dark:bg-slate-900 rounded-2xl p-3 sm:p-6 relative">
+          <div className="bg-[#f2f2f2] dark:bg-slate-900 rounded-2xl p-3 sm:p-6 relative m-[-8px] sm:m-0">
             {/* Countdown Overlay - Only over the chart */}
             {(gameState === "countdown" ||
               (gameState === "pre-game" && !showGameModal)) && (
@@ -627,9 +665,104 @@ function App() {
                 onStartClick={playAgain}
               />
             )}
+            {/* Mobile: Y-axis labels above chart */}
+            <div className="sm:hidden flex justify-between items-center px-2 mb-1">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                {formatCurrency(priceRange.max)}
+              </span>
+            </div>
             <div className="relative h-64 overflow-hidden">
+              {/* Mobile Chart - Full Width */}
               <svg
-                className="w-full h-full"
+                className="w-full h-full sm:hidden"
+                viewBox="0 0 800 256"
+                preserveAspectRatio="none"
+              >
+                {/* Grid lines */}
+                <defs>
+                  <pattern
+                    id="grid-mobile"
+                    width="40"
+                    height="32"
+                    patternUnits="userSpaceOnUse"
+                  >
+                    <path
+                      d="M 40 0 L 0 0 0 32"
+                      fill="none"
+                      stroke="var(--chart-grid)"
+                      strokeWidth="1"
+                    />
+                  </pattern>
+                  <linearGradient
+                    id="areaGradient-mobile"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor={trendColor}
+                      stopOpacity="0.18"
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor={trendColor}
+                      stopOpacity="0"
+                    />
+                  </linearGradient>
+                </defs>
+                <rect
+                  x={plotLeftMobile}
+                  y={plotTop}
+                  width={plotWidthMobile}
+                  height={plotHeight}
+                  fill="url(#grid-mobile)"
+                />
+
+                {/* Price area and line */}
+                {coordsMobile.length > 1 && areaPathDMobile && (
+                  <path d={areaPathDMobile} fill="url(#areaGradient-mobile)" />
+                )}
+                {recentPrices.length > 1 && (
+                  <polyline
+                    fill="none"
+                    stroke={trendColor}
+                    strokeWidth="4"
+                    points={linePointsMobile}
+                  />
+                )}
+
+                {/* Average buy price line for current holdings */}
+                {shares > 0 &&
+                  currentHoldingsAvgPrice >= priceRange.min &&
+                  currentHoldingsAvgPrice <= priceRange.max && (
+                    <line
+                      x1={plotLeftMobile}
+                      y1={yFor(currentHoldingsAvgPrice)}
+                      x2={plotLeftMobile + plotWidthMobile}
+                      y2={yFor(currentHoldingsAvgPrice)}
+                      stroke="#fbbf24"
+                      strokeWidth="4"
+                      strokeDasharray="8,4"
+                    />
+                  )}
+
+                {/* Current price dot */}
+                {recentPrices.length > 0 && (
+                  <circle
+                    cx={xForMobile(numRecent - 1)}
+                    cy={yFor(stockData.price)}
+                    r="8"
+                    fill={trendColor}
+                    className="animate-pulse"
+                  />
+                )}
+              </svg>
+
+              {/* Desktop Chart - With Y-Axis on Left */}
+              <svg
+                className="hidden sm:block w-full h-full"
                 viewBox="0 0 800 256"
                 preserveAspectRatio="none"
               >
@@ -715,9 +848,7 @@ function App() {
                   {formatCurrency(priceRange.min)}
                 </text>
 
-                {/* Removed avg buy indicators on axis when out of range */}
-
-                {/* Price line */}
+                {/* Price area and line */}
                 {coords.length > 1 && areaPathD && (
                   <path d={areaPathD} fill="url(#areaGradient)" />
                 )}
@@ -736,21 +867,9 @@ function App() {
                   currentHoldingsAvgPrice <= priceRange.max && (
                     <line
                       x1={plotLeft}
-                      y1={
-                        256 -
-                        ((currentHoldingsAvgPrice - priceRange.min) /
-                          (priceRange.max - priceRange.min || 1)) *
-                          plotHeight -
-                        plotTop
-                      }
+                      y1={yFor(currentHoldingsAvgPrice)}
                       x2={plotLeft + plotWidth}
-                      y2={
-                        256 -
-                        ((currentHoldingsAvgPrice - priceRange.min) /
-                          (priceRange.max - priceRange.min || 1)) *
-                          plotHeight -
-                        plotTop
-                      }
+                      y2={yFor(currentHoldingsAvgPrice)}
                       stroke="#fbbf24"
                       strokeWidth="3"
                       strokeDasharray="8,4"
@@ -761,13 +880,7 @@ function App() {
                 {recentPrices.length > 0 && (
                   <circle
                     cx={xFor(numRecent - 1)}
-                    cy={
-                      256 -
-                      ((stockData.price - priceRange.min) /
-                        (priceRange.max - priceRange.min || 1)) *
-                        plotHeight -
-                      plotTop
-                    }
+                    cy={yFor(stockData.price)}
                     r="6"
                     fill={trendColor}
                     className="animate-pulse"
@@ -775,8 +888,14 @@ function App() {
                 )}
               </svg>
             </div>
+            {/* Mobile: Y-axis labels below chart */}
+            <div className="sm:hidden flex justify-between items-center px-2 mt-1">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                {formatCurrency(priceRange.min)}
+              </span>
+            </div>
             <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 text-xs sm:text-base text-slate-500 font-semibold mt-3 sm:mt-6">
-              <span className="text-slate-500 dark:text-slate-400">
+              <span className="hidden sm:inline text-slate-500 dark:text-slate-400">
                 <span className="font-bold">10s Range:</span>{" "}
                 <span className="font-semibold">
                   {formatCurrency(priceRange.min)} -{" "}
@@ -810,13 +929,15 @@ function App() {
                 gameState === "ended" ||
                 cash < stockData.price
               }
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-2 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
                 gameState === "active" && cash >= stockData.price
                   ? "bg-green-500 hover:bg-green-600 text-white"
                   : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
-              <span className="text-lg sm:text-xl font-black">+</span>
+              <span className="hidden sm:inline text-lg sm:text-xl font-black">
+                +
+              </span>
               <div className="text-center">
                 <div className="text-sm sm:text-lg font-black">BUY 1</div>
                 <div className="text-xs sm:text-sm opacity-90">
@@ -833,13 +954,15 @@ function App() {
                 gameState === "ended" ||
                 cash < stockData.price * 5
               }
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-2 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
                 gameState === "active" && cash >= stockData.price * 5
                   ? "bg-green-600 hover:bg-green-700 text-white"
                   : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
-              <span className="text-lg sm:text-xl font-black">+</span>
+              <span className="hidden sm:inline text-lg sm:text-xl font-black">
+                +
+              </span>
               <div className="text-center">
                 <div className="text-sm sm:text-lg font-black">BUY 5</div>
                 <div className="text-xs sm:text-sm opacity-90">
@@ -857,7 +980,7 @@ function App() {
                 cash < stockData.price ||
                 Math.floor(cash / stockData.price) === 0
               }
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-2 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
                 gameState === "active" &&
                 cash >= stockData.price &&
                 Math.floor(cash / stockData.price) > 0
@@ -865,7 +988,9 @@ function App() {
                   : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
-              <span className="text-lg sm:text-xl font-black">+</span>
+              <span className="hidden sm:inline text-lg sm:text-xl font-black">
+                +
+              </span>
               <div className="text-center">
                 <div className="text-sm sm:text-lg font-black">MAX</div>
                 <div className="text-xs sm:text-sm opacity-90">
@@ -885,13 +1010,15 @@ function App() {
                 gameState === "ended" ||
                 shares === 0
               }
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-2 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
                 gameState === "active" && shares > 0
                   ? "bg-orange-500 hover:bg-orange-600 text-white"
                   : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
-              <span className="text-lg sm:text-xl font-black">−</span>
+              <span className="hidden sm:inline text-lg sm:text-xl font-black">
+                −
+              </span>
               <div className="text-center">
                 <div className="text-sm sm:text-lg font-black">SELL 1</div>
                 <div className="text-xs sm:text-sm opacity-90">
@@ -908,13 +1035,15 @@ function App() {
                 gameState === "ended" ||
                 shares < 5
               }
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-2 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
                 gameState === "active" && shares >= 5
                   ? "bg-orange-600 hover:bg-orange-700 text-white"
                   : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
-              <span className="text-lg sm:text-xl font-black">−</span>
+              <span className="hidden sm:inline text-lg sm:text-xl font-black">
+                −
+              </span>
               <div className="text-center">
                 <div className="text-sm sm:text-lg font-black">SELL 5</div>
                 <div className="text-xs sm:text-sm opacity-90">
@@ -931,13 +1060,15 @@ function App() {
                 gameState === "ended" ||
                 shares === 0
               }
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold py-2 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl floating-button bounce-click sm:flex-1 transition-all duration-200 ${
                 gameState === "active" && shares > 0
                   ? "bg-orange-700 hover:bg-orange-800 text-white"
                   : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
               }`}
             >
-              <span className="text-lg sm:text-xl font-black">−</span>
+              <span className="hidden sm:inline text-lg sm:text-xl font-black">
+                −
+              </span>
               <div className="text-center">
                 <div className="text-sm sm:text-lg font-black">ALL</div>
                 <div className="text-xs sm:text-sm opacity-90">
