@@ -513,9 +513,125 @@ function App() {
       />
 
       {/* Single Vertical Panel */}
-      <div className="max-w-4xl mx-auto p-3 sm:p-7">
+      <div className="max-w-4xl mx-auto p-3 sm:p-7 flex flex-col">
+        {/* Game State Information Card - Mobile: Show at top, Desktop: Show after buttons */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl p-3 sm:p-8 mb-3 sm:mb-8 game-tile order-1 sm:order-3">
+          {/* Mobile: Compact horizontal layout */}
+          <div className="block sm:hidden">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex-1">
+                <p
+                  className={`text-xl font-black ${
+                    totalValue >= gameParameters.targetValue
+                      ? "text-green-600 dark:text-green-400"
+                      : totalValue >= gameParameters.startingCash
+                      ? "text-blue-600 dark:text-sky-400"
+                      : "text-orange-600 dark:text-orange-400"
+                  }`}
+                >
+                  {formatCurrency(totalValue)}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  of {formatCurrency(gameParameters.targetValue)}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-black text-green-600 dark:text-green-400">
+                  {Math.min(
+                    (totalValue / gameParameters.targetValue) * 100,
+                    100
+                  ).toFixed(0)}
+                  %
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {formatCurrency(
+                    Math.max(0, gameParameters.targetValue - totalValue)
+                  )}{" "}
+                  to go
+                </p>
+              </div>
+            </div>
+            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-green-500 to-green-400 h-2 rounded-full transition-all duration-300"
+                style={{
+                  width: `${Math.min(
+                    (totalValue / gameParameters.targetValue) * 100,
+                    100
+                  )}%`,
+                }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Desktop: Original layout */}
+          <div className="hidden sm:block">
+            {/* Game Status */}
+            <div className="mb-4 sm:mb-6">
+              {/* Full Width Portfolio Progress Bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+                  <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                    Need:{" "}
+                    {formatCurrency(
+                      Math.max(0, gameParameters.targetValue - totalValue)
+                    )}
+                  </span>
+                  <span>
+                    {Math.min(
+                      (totalValue / gameParameters.targetValue) * 100,
+                      100
+                    ).toFixed(1)}
+                    %
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+                  <div
+                    className="bg-gradient-to-r from-green-500 to-green-400 h-3 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.min(
+                        (totalValue / gameParameters.targetValue) * 100,
+                        100
+                      )}%`,
+                    }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Game Target Information */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="text-center">
+                <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                  Current Value
+                </p>
+                <p
+                  className={`text-lg sm:text-2xl font-black ${
+                    totalValue >= gameParameters.targetValue
+                      ? "text-green-600 dark:text-green-400"
+                      : totalValue >= gameParameters.startingCash
+                      ? "text-blue-600 dark:text-sky-400"
+                      : "text-orange-600 dark:text-orange-400"
+                  }`}
+                >
+                  {formatCurrency(totalValue)}
+                </p>
+              </div>
+
+              <div className="text-center">
+                <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                  Target Value
+                </p>
+                <p className="text-lg sm:text-2xl font-black text-green-600 dark:text-green-400">
+                  {formatCurrency(gameParameters.targetValue)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Chart Section */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-8 mb-4 sm:mb-8 game-tile">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-8 mb-4 sm:mb-8 game-tile order-2">
           <div className="mb-3 sm:mb-6">
             {gameState !== "ended" && (
               <h3 className="text-lg sm:text-2xl font-bold text-slate-700 dark:text-slate-300">
@@ -918,7 +1034,7 @@ function App() {
         </div>
 
         {/* Buy/Sell Button Groups */}
-        <div className="grid grid-cols-3 sm:flex sm:gap-6 gap-2 mb-4 sm:mb-8">
+        <div className="grid grid-cols-3 sm:flex sm:gap-6 gap-2 mb-4 sm:mb-8 order-3 sm:order-2">
           {/* Buy Buttons */}
           <div className="contents sm:flex sm:gap-2 sm:flex-1">
             <button
@@ -1079,73 +1195,8 @@ function App() {
           </div>
         </div>
 
-        {/* Game State Information Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-8 mb-4 sm:mb-8 game-tile">
-          {/* Game Status */}
-          <div className="mb-4 sm:mb-6">
-            {/* Full Width Portfolio Progress Bar */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-                  Need:{" "}
-                  {formatCurrency(
-                    Math.max(0, gameParameters.targetValue - totalValue)
-                  )}
-                </span>
-                <span>
-                  {Math.min(
-                    (totalValue / gameParameters.targetValue) * 100,
-                    100
-                  ).toFixed(1)}
-                  %
-                </span>
-              </div>
-              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
-                <div
-                  className="bg-gradient-to-r from-green-500 to-green-400 h-3 rounded-full transition-all duration-300"
-                  style={{
-                    width: `${Math.min(
-                      (totalValue / gameParameters.targetValue) * 100,
-                      100
-                    )}%`,
-                  }}
-                ></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Game Target Information */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="text-center">
-              <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                Current Value
-              </p>
-              <p
-                className={`text-lg sm:text-2xl font-black ${
-                  totalValue >= gameParameters.targetValue
-                    ? "text-green-600 dark:text-green-400"
-                    : totalValue >= gameParameters.startingCash
-                    ? "text-blue-600 dark:text-sky-400"
-                    : "text-orange-600 dark:text-orange-400"
-                }`}
-              >
-                {formatCurrency(totalValue)}
-              </p>
-            </div>
-
-            <div className="text-center">
-              <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                Target Value
-              </p>
-              <p className="text-lg sm:text-2xl font-black text-green-600 dark:text-green-400">
-                {formatCurrency(gameParameters.targetValue)}
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Portfolio Information Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-8 game-tile">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-8 game-tile order-4">
           <div className="flex items-center justify-between mb-3 sm:mb-6">
             <h3 className="text-lg sm:text-2xl font-bold text-slate-700 dark:text-slate-300">
               Portfolio Summary
@@ -1224,6 +1275,7 @@ function App() {
           hasPlayedToday={hasPlayedToday}
           onLeaderboardClick={handleLeaderboardClick}
           onResultsClick={handleResultsClick}
+          gameState={gameState}
         />
       )}
 

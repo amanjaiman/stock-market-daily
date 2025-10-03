@@ -10,6 +10,8 @@ interface DateRange {
   days: number;
 }
 
+type GameState = "pre-game" | "countdown" | "active" | "ended";
+
 interface GameModalProps {
   startingCash: number;
   startingStockPrice: number;
@@ -24,6 +26,7 @@ interface GameModalProps {
   hasPlayedToday?: boolean;
   onLeaderboardClick?: () => void;
   onResultsClick?: () => void;
+  gameState?: GameState;
 }
 
 import { useState, useEffect } from "react";
@@ -43,8 +46,16 @@ function GameModal({
   hasPlayedToday = false,
   onLeaderboardClick,
   onResultsClick,
+  gameState = "pre-game",
 }: GameModalProps) {
   const [rulesExpanded, setRulesExpanded] = useState(false);
+
+  // Auto-expand rules when game is in progress
+  useEffect(() => {
+    if (gameState === "countdown" || gameState === "active") {
+      setRulesExpanded(true);
+    }
+  }, [gameState]);
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -291,7 +302,17 @@ function GameModal({
         </div>
 
         {/* Action Buttons */}
-        {hasPlayedToday ? (
+        {gameState === "countdown" || gameState === "active" ? (
+          // Show only close button when game is in progress
+          <div className="flex justify-center mt-6 sm:mt-8">
+            <button
+              onClick={onClose}
+              className="font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-slate-600 hover:bg-slate-700 text-white text-sm sm:text-base"
+            >
+              Close
+            </button>
+          </div>
+        ) : hasPlayedToday ? (
           <div className="flex justify-center gap-3 sm:gap-4 mt-6 sm:mt-8">
             <button
               onClick={onClose}
