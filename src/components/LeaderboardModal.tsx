@@ -27,7 +27,7 @@ function LeaderboardModal({ onClose }: LeaderboardModalProps) {
   useEffect(() => {
     // Check if user already has a name stored
     const storedName = getUserName();
-    if (storedName) {
+    if (storedName && storedName.trim() !== "") {
       setUserName(storedName);
       setIsEnteringName(false);
     } else {
@@ -68,7 +68,7 @@ function LeaderboardModal({ onClose }: LeaderboardModalProps) {
     }
   }, [userName, challenge, isEnteringName]);
 
-  const handleNameSubmit = (e: React.FormEvent) => {
+  const handleNameSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = nameInput.trim();
 
@@ -82,7 +82,7 @@ function LeaderboardModal({ onClose }: LeaderboardModalProps) {
       return;
     }
 
-    saveUserName(trimmedName);
+    await saveUserName(trimmedName);
     setUserName(trimmedName);
     setIsEnteringName(false);
   };

@@ -43,25 +43,60 @@ export const getUserName = (): string | null => {
 };
 
 /**
- * Save the user's name to localStorage and update all existing Anonymous entries
+ * Save the user's name to localStorage and sync with Supabase
+ * Creates or updates the Supabase entry with the user's score data
  */
-export const saveUserName = (name: string): void => {
+export const saveUserName = async (name: string): Promise<void> => {
   const trimmedName = name.trim();
   localStorage.setItem(USER_NAME_KEY, trimmedName);
   
-  // Update all existing Anonymous entries with the new name
+  // Update localStorage entries with the new name
   const entries = getLeaderboardEntries();
-  let updated = false;
   
   entries.forEach((entry) => {
-    if (entry.name === "Anonymous") {
+    // Update any entry without a name (empty string)
+    if (!entry.name || entry.name === "") {
       entry.name = trimmedName;
-      updated = true;
     }
   });
   
-  if (updated) {
+  if (entries.length > 0) {
     localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries));
+    
+    // Now sync with Supabase - either create or update
+    const userUUID = getUserUUID();
+    const currentEntry = entries[0]; // Should only be one entry for current day
+    
+    try {
+      if (userUUID) {
+        // We have a UUID - update existing entry
+        await updateLeaderboardEntry(userUUID, {
+          name: trimmedName,
+          final_value: currentEntry.final_value,
+          percentage_change_of_value: currentEntry.percentage_change_of_value,
+          avg_buy: currentEntry.avg_buy,
+          ppt: currentEntry.ppt,
+          num_tries: currentEntry.num_tries,
+        });
+      } else {
+        // No UUID - create new entry in Supabase
+        const newUUID = await createLeaderboardEntry({
+          day: currentEntry.day,
+          name: trimmedName,
+          final_value: currentEntry.final_value,
+          percentage_change_of_value: currentEntry.percentage_change_of_value,
+          avg_buy: currentEntry.avg_buy,
+          ppt: currentEntry.ppt,
+          num_tries: currentEntry.num_tries,
+        });
+        
+        if (newUUID) {
+          saveUserUUID(newUUID);
+        }
+      }
+    } catch (error) {
+      console.error("Error syncing with Supabase:", error);
+    }
   }
 };
 
@@ -89,10 +124,8 @@ export const getEntryForDay = (day: number): LeaderboardEntry | null => {
 };
 
 /**
- * Save or update a leaderboard entry
- * Updates the entry if the new final_value is better than the existing one
- * Automatically cleans up entries from previous days
- * Also syncs with Supabase
+ * Save or update a leaderboard entry in localStorage
+ * If user has a name set, also syncs with Supabase
  */
 export const saveLeaderboardEntry = async (
   day: number,
@@ -101,9 +134,8 @@ export const saveLeaderboardEntry = async (
   avgBuy: number,
   ppt: number
 ): Promise<void> => {
-  const userName = getUserName() || "Anonymous";
+  const userName = getUserName() || ""; // Empty string if no name set yet
   const userUUID = getUserUUID();
-
   const entries = getLeaderboardEntries();
   
   // Remove entries from different days (only keep current day)
@@ -112,8 +144,7 @@ export const saveLeaderboardEntry = async (
   const existingEntryIndex = currentDayEntries.findIndex((entry) => entry.day === day);
 
   let updatedEntries: LeaderboardEntry[];
-  let shouldUpdateSupabase = false;
-  let isNewEntry = false;
+  let shouldSyncSupabase = false;
 
   if (existingEntryIndex >= 0) {
     // Update existing entry for today
@@ -123,58 +154,40 @@ export const saveLeaderboardEntry = async (
     if (finalValue > existingEntry.final_value) {
       currentDayEntries[existingEntryIndex] = {
         day,
-        name: userName,
+        name: userName || existingEntry.name, // Keep existing name if set
         final_value: finalValue,
         percentage_change_of_value: percentageChange,
         avg_buy: avgBuy,
         ppt: ppt,
         num_tries: existingEntry.num_tries + 1,
       };
-      shouldUpdateSupabase = true;
+      shouldSyncSupabase = true;
     } else {
       // Increment num_tries even if score didn't improve
       currentDayEntries[existingEntryIndex].num_tries += 1;
-      shouldUpdateSupabase = true; // Always update to sync num_tries
+      shouldSyncSupabase = true;
     }
     updatedEntries = currentDayEntries;
   } else {
-    // Create new entry for today
+    // Create new entry for today (localStorage only)
     updatedEntries = [{
       day,
-      name: userName,
+      name: userName, // Will be empty string until user sets name
       final_value: finalValue,
       percentage_change_of_value: percentageChange,
       avg_buy: avgBuy,
       ppt: ppt,
       num_tries: 1,
     }];
-    isNewEntry = true;
-    shouldUpdateSupabase = true;
   }
 
   // Save to localStorage
   localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(updatedEntries));
 
-  // Sync with Supabase
-  try {
-    if (isNewEntry) {
-      // Create new entry in Supabase
-      const newUUID = await createLeaderboardEntry({
-        day,
-        name: userName,
-        final_value: finalValue,
-        percentage_change_of_value: percentageChange,
-        avg_buy: avgBuy,
-        ppt: ppt,
-        num_tries: 1,
-      });
-
-      if (newUUID) {
-        saveUserUUID(newUUID);
-      }
-    } else if (shouldUpdateSupabase && userUUID) {
-      // Update existing entry in Supabase
-      const currentEntry = updatedEntries[existingEntryIndex];
+  // If user has a name and UUID, sync with Supabase
+  if (shouldSyncSupabase && userName && userName.trim() !== "" && userUUID) {
+    try {
+      const currentEntry = updatedEntries[0];
       await updateLeaderboardEntry(userUUID, {
         name: userName,
         final_value: currentEntry.final_value,
@@ -183,27 +196,9 @@ export const saveLeaderboardEntry = async (
         ppt: currentEntry.ppt,
         num_tries: currentEntry.num_tries,
       });
-    } else if (shouldUpdateSupabase && !userUUID) {
-      // We have a local entry but no UUID - check if we can find it in Supabase
-      // or create a new one
-      const currentEntry = updatedEntries[existingEntryIndex];
-      const newUUID = await createLeaderboardEntry({
-        day: currentEntry.day,
-        name: currentEntry.name,
-        final_value: currentEntry.final_value,
-        percentage_change_of_value: currentEntry.percentage_change_of_value,
-        avg_buy: currentEntry.avg_buy,
-        ppt: currentEntry.ppt,
-        num_tries: currentEntry.num_tries,
-      });
-
-      if (newUUID) {
-        saveUserUUID(newUUID);
-      }
+    } catch (error) {
+      console.error("Error syncing with Supabase:", error);
     }
-  } catch (error) {
-    console.error("Error syncing with Supabase:", error);
-    // Continue anyway - local storage is saved
   }
 };
 
