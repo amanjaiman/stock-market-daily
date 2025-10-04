@@ -144,7 +144,7 @@ export const saveLeaderboardEntry = async (
   const existingEntryIndex = currentDayEntries.findIndex((entry) => entry.day === day);
 
   let updatedEntries: LeaderboardEntry[];
-  let shouldSyncSupabase = false;
+  let isNewEntry = false;
 
   if (existingEntryIndex >= 0) {
     // Update existing entry for today
@@ -161,15 +161,13 @@ export const saveLeaderboardEntry = async (
         ppt: ppt,
         num_tries: existingEntry.num_tries + 1,
       };
-      shouldSyncSupabase = true;
     } else {
       // Increment num_tries even if score didn't improve
       currentDayEntries[existingEntryIndex].num_tries += 1;
-      shouldSyncSupabase = true;
     }
     updatedEntries = currentDayEntries;
   } else {
-    // Create new entry for today (localStorage only)
+    // Create new entry for today
     updatedEntries = [{
       day,
       name: userName, // Will be empty string until user sets name
@@ -179,23 +177,43 @@ export const saveLeaderboardEntry = async (
       ppt: ppt,
       num_tries: 1,
     }];
+    isNewEntry = true;
   }
 
   // Save to localStorage
   localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(updatedEntries));
 
-  // If user has a name and UUID, sync with Supabase
-  if (shouldSyncSupabase && userName && userName.trim() !== "" && userUUID) {
+  const currentEntry = updatedEntries[0];
+
+  // Sync with Supabase if user has a name
+  if (userName && userName.trim() !== "") {
     try {
-      const currentEntry = updatedEntries[0];
-      await updateLeaderboardEntry(userUUID, {
-        name: userName,
-        final_value: currentEntry.final_value,
-        percentage_change_of_value: currentEntry.percentage_change_of_value,
-        avg_buy: currentEntry.avg_buy,
-        ppt: currentEntry.ppt,
-        num_tries: currentEntry.num_tries,
-      });
+      if (isNewEntry) {
+        // Create new entry in Supabase for this day
+        const newUUID = await createLeaderboardEntry({
+          day,
+          name: userName,
+          final_value: currentEntry.final_value,
+          percentage_change_of_value: currentEntry.percentage_change_of_value,
+          avg_buy: currentEntry.avg_buy,
+          ppt: currentEntry.ppt,
+          num_tries: currentEntry.num_tries,
+        });
+        
+        if (newUUID) {
+          saveUserUUID(newUUID);
+        }
+      } else if (userUUID) {
+        // Update existing entry in Supabase
+        await updateLeaderboardEntry(userUUID, {
+          name: userName,
+          final_value: currentEntry.final_value,
+          percentage_change_of_value: currentEntry.percentage_change_of_value,
+          avg_buy: currentEntry.avg_buy,
+          ppt: currentEntry.ppt,
+          num_tries: currentEntry.num_tries,
+        });
+      }
     } catch (error) {
       console.error("Error syncing with Supabase:", error);
     }
