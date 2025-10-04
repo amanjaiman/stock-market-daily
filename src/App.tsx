@@ -779,7 +779,7 @@ function App() {
               </div>
               <div className="text-right">
                 {/* Timer Display */}
-                {(gameState === "active" || gameState === "ended") && (
+                {gameState === "active" && (
                   <div className="flex items-center justify-end gap-2">
                     <svg
                       className={`w-6 h-6 ${
@@ -813,6 +813,15 @@ function App() {
                       {(timeRemaining % 60).toString().padStart(2, "0")}
                     </span>
                   </div>
+                )}
+                {/* Play Again Button - replaces timer when game ends */}
+                {gameState === "ended" && (
+                  <button
+                    onClick={playAgain}
+                    className="font-medium py-2.5 sm:py-4 px-3 sm:px-6 rounded-2xl sm:rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white text-sm sm:text-base whitespace-nowrap"
+                  >
+                    Play again
+                  </button>
                 )}
               </div>
             </div>

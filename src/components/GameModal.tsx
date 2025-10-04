@@ -324,7 +324,7 @@ function GameModal({
               onClick={onPlayAgain}
               className="font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white text-sm sm:text-base"
             >
-              Play Again
+              Play again
             </button>
           </div>
         ) : (
