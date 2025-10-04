@@ -82,7 +82,13 @@ function LeaderboardModal({ onClose }: LeaderboardModalProps) {
       return;
     }
 
-    await saveUserName(trimmedName);
+    const result = await saveUserName(trimmedName);
+
+    if (!result.success) {
+      alert(result.error || "Failed to save name. Please try again.");
+      return;
+    }
+
     setUserName(trimmedName);
     setIsEnteringName(false);
   };

@@ -46,7 +46,7 @@ export const getUserName = (): string | null => {
  * Save the user's name to localStorage and sync with Supabase
  * Creates or updates the Supabase entry with the user's score data
  */
-export const saveUserName = async (name: string): Promise<void> => {
+export const saveUserName = async (name: string): Promise<{ success: boolean; error?: string }> => {
   const trimmedName = name.trim();
   localStorage.setItem(USER_NAME_KEY, trimmedName);
   
@@ -70,7 +70,7 @@ export const saveUserName = async (name: string): Promise<void> => {
     try {
       if (userUUID) {
         // We have a UUID - update existing entry
-        await updateLeaderboardEntry(userUUID, {
+        const success = await updateLeaderboardEntry(userUUID, {
           name: trimmedName,
           final_value: currentEntry.final_value,
           percentage_change_of_value: currentEntry.percentage_change_of_value,
@@ -78,6 +78,10 @@ export const saveUserName = async (name: string): Promise<void> => {
           ppt: currentEntry.ppt,
           num_tries: currentEntry.num_tries,
         });
+        
+        if (!success) {
+          return { success: false, error: "Failed to update leaderboard. Please try again." };
+        }
       } else {
         // No UUID - create new entry in Supabase
         const newUUID = await createLeaderboardEntry({
@@ -90,14 +94,19 @@ export const saveUserName = async (name: string): Promise<void> => {
           num_tries: currentEntry.num_tries,
         });
         
-        if (newUUID) {
-          saveUserUUID(newUUID);
+        if (!newUUID) {
+          return { success: false, error: "Failed to save to leaderboard. Please try again." };
         }
+        
+        saveUserUUID(newUUID);
       }
     } catch (error) {
       console.error("Error syncing with Supabase:", error);
+      return { success: false, error: "Connection error. Please check your internet and try again." };
     }
   }
+  
+  return { success: true };
 };
 
 /**
