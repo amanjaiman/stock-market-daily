@@ -81,3 +81,42 @@ Fustat
 .game-tile:hover {
   transform: translateY(-1px);
 }
+
+/* Minimal scrollbar styling */
+.scrollbar-minimal {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.scrollbar-minimal::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-minimal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-minimal::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+  border: none;
+}
+
+.scrollbar-minimal::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+/* Dark mode scrollbar */
+.dark .scrollbar-minimal {
+  scrollbar-color: #475569 transparent;
+}
+
+.dark .scrollbar-minimal::-webkit-scrollbar-thumb {
+  background-color: #475569;
+}
+
+.dark .scrollbar-minimal::-webkit-scrollbar-thumb:hover {
+  background-color: #64748b;
+}

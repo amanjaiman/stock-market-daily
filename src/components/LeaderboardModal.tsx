@@ -102,7 +102,7 @@ function LeaderboardModal({ onClose }: LeaderboardModalProps) {
       ></div>
 
       {/* Modal */}
-      <div className="relative bg-[#f2f2f2] dark:bg-slate-900 border-1 border-gray-200 dark:border-gray-700 shadow-sm rounded-3xl p-4 sm:p-8 max-w-lg sm:max-w-2xl w-full max-h-full overflow-y-auto my-4 transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4 duration-500 ease-out">
+      <div className="relative bg-[#f2f2f2] dark:bg-slate-900 border-1 border-gray-200 dark:border-gray-700 shadow-sm rounded-3xl p-4 sm:p-8 max-w-lg sm:max-w-2xl w-full my-4 transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4 duration-500 ease-out">
         {/* Name Entry Form */}
         {isEnteringName && (
           <div className="space-y-4 sm:space-y-6">
@@ -229,9 +229,9 @@ function LeaderboardModal({ onClose }: LeaderboardModalProps) {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-[400px] overflow-y-auto scrollbar-minimal">
                   <table className="w-full text-xs sm:text-sm">
-                    <thead className="bg-gray-100 dark:bg-slate-950 border-b-2 border-gray-200 dark:border-slate-700">
+                    <thead className="bg-gray-100 dark:bg-slate-950 border-b-2 border-gray-200 dark:border-slate-700 sticky top-0 z-10">
                       <tr>
                         <th className="px-2 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-12 sm:w-16">
                           Rank
@@ -242,7 +242,7 @@ function LeaderboardModal({ onClose }: LeaderboardModalProps) {
                         <th className="px-2 sm:px-6 py-2 sm:py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
                           Value
                         </th>
-                        <th className="hidden sm:table-cell px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                        <th className="px-2 sm:px-6 py-2 sm:py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
                           Avg PPT
                         </th>
                         <th className="px-2 sm:px-6 py-2 sm:py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-12 sm:w-16">
@@ -296,7 +296,7 @@ function LeaderboardModal({ onClose }: LeaderboardModalProps) {
                                 {entry.percentage_change_of_value.toFixed(1)}%
                               </div>
                             </td>
-                            <td className="hidden sm:table-cell px-6 py-2.5 text-right font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                            <td className="px-2 sm:px-6 py-2 sm:py-2.5 text-right font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                               ${entry.ppt.toFixed(2)}
                             </td>
                             <td className="px-2 sm:px-6 py-2 sm:py-2.5 text-right text-slate-600 dark:text-slate-400">
