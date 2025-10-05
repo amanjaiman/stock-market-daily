@@ -676,6 +676,41 @@ serve(async (req) => {
       botEntries.push(botEntry);
     }
 
+    // Ensure a minimum number of bots beat the target
+    const minWinners = random.nextInt(3, 10);
+    const targetValue = challenge.target_value;
+    const winnersCount = botEntries.filter(bot => bot.final_value >= targetValue).length;
+    
+    if (winnersCount < minWinners) {
+      // Need to boost some bots to reach the target
+      const botsNeeded = minWinners - winnersCount;
+      
+      // Get bots that are below target, sorted by how close they are (closest first)
+      const losers = botEntries
+        .filter(bot => bot.final_value < targetValue)
+        .sort((a, b) => b.final_value - a.final_value); // Highest to lowest
+      
+      // Boost the top performers who didn't quite make it
+      for (let i = 0; i < Math.min(botsNeeded, losers.length); i++) {
+        const bot = losers[i];
+        const startingCash = challenge.starting_cash;
+        
+        // Boost them to 100-110% of target (random within that range)
+        const boostMultiplier = 1.00 + (random.next() * 0.10);
+        const newFinalValue = targetValue * boostMultiplier;
+        
+        // Update final value and recalculate dependent metrics
+        bot.final_value = Number(newFinalValue.toFixed(2));
+        bot.percentage_change_of_value = Number(((newFinalValue - startingCash) / startingCash * 100).toFixed(2));
+        
+        // Recalculate PPT if they have shares bought
+        if (bot.ppt !== 0) {
+          const totalSharesBought = (newFinalValue - startingCash) / bot.ppt;
+          bot.ppt = Number(((newFinalValue - startingCash) / totalSharesBought).toFixed(2));
+        }
+      }
+    }
+
     // Insert all bot entries
     const { data: insertedBots, error: insertError } = await supabase
       .from('leaderboard')
@@ -692,6 +727,7 @@ serve(async (req) => {
     const avgFinalValue = finalValues.reduce((sum, v) => sum + v, 0) / finalValues.length;
     const maxFinalValue = Math.max(...finalValues);
     const minFinalValue = Math.min(...finalValues);
+    const finalWinnersCount = botEntries.filter(bot => bot.final_value >= targetValue).length;
 
     return new Response(
       JSON.stringify({
@@ -701,10 +737,13 @@ serve(async (req) => {
         botsCreated: insertedBots?.length || 0,
         statistics: {
           startingCash: challenge.starting_cash,
+          targetValue: challenge.target_value,
           parFinalValue: challenge.par_final_value,
           avgBotFinalValue: Number(avgFinalValue.toFixed(2)),
           maxBotFinalValue: Number(maxFinalValue.toFixed(2)),
           minBotFinalValue: Number(minFinalValue.toFixed(2)),
+          botsAboveTarget: finalWinnersCount,
+          minWinnersRequired: minWinners,
         },
       }),
       {

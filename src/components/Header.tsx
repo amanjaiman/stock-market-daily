@@ -42,8 +42,11 @@ const Header: React.FC<HeaderProps> = ({
     <header className="w-full bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
       <div className="max-w-6xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between">
-          {/* Left side - Game Title (left-aligned on mobile, centered on larger screens) */}
-          <div className="flex-1 flex justify-start sm:justify-center">
+          {/* Left spacer - hidden on mobile, matches right side width on desktop */}
+          <div className="hidden sm:flex sm:flex-1" />
+
+          {/* Center - Game Title (left-aligned on mobile, centered on larger screens) */}
+          <div className="flex-1 sm:flex-none">
             <h1 className="game-title text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100">
               Day
               <span className="game-title text-green-600 dark:text-green-400">
@@ -53,7 +56,7 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right side - Icon buttons */}
-          <div className="flex items-center gap-1 sm:gap-2 justify-end">
+          <div className="flex items-center gap-1 sm:gap-2 justify-end sm:flex-1">
             {/* Leaderboard */}
             <button
               onClick={onLeaderboardClick}
