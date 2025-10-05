@@ -108,7 +108,7 @@ function LeaderboardModal({ onClose }: LeaderboardModalProps) {
           <div className="space-y-4 sm:space-y-6">
             <div className="text-center">
               <h2 className="text-xl sm:text-2xl font-bold text-slate-700 dark:text-slate-300 mb-2">
-                Leaderboard
+                Daily Leaderboard
               </h2>
             </div>
 
@@ -159,7 +159,7 @@ function LeaderboardModal({ onClose }: LeaderboardModalProps) {
           <div className="space-y-4 sm:space-y-6">
             <div className="space-y-3">
               <h2 className="text-xl sm:text-2xl font-bold text-slate-700 dark:text-slate-300 text-center">
-                Leaderboard
+                Daily Leaderboard
               </h2>
 
               {/* Info Cards */}
