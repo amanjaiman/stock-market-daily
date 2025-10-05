@@ -270,29 +270,38 @@ function GameModal({
             <div className="px-4 sm:px-8 pb-4 sm:pb-8 pt-1">
               <ul className="space-y-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                 <li className="flex items-start gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></span>
+                  <span className="min-w-2 min-h-2 bg-green-500 rounded-full mt-1.5"></span>
                   <span>
-                    You have <strong>60 seconds</strong> to trade shares of a
-                    real stock
+                    Trade a <strong>real stock</strong> as its historical prices
+                    replay in 60 seconds
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></span>
-                  <span>The stock price changes five times every second</span>
+                  <span className="min-w-2 min-h-2 bg-green-500 rounded-full mt-1.5"></span>
+                  <span>
+                    Only the stock category and time period are revealed
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></span>
+                  <span className="min-w-2 min-h-2 bg-green-500 rounded-full mt-1.5"></span>
+                  <span>
+                    Buy and sell shares quickly - only{" "}
+                    <strong>60 seconds</strong>
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="min-w-2 min-h-2 bg-green-500 rounded-full mt-1.5"></span>
                   <span>
                     Reach the target portfolio value to win and climb the
                     leaderboard
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></span>
+                  <span className="min-w-2 min-h-2 bg-green-500 rounded-full mt-1.5"></span>
                   <span>
-                    Try to beat the par{" "}
-                    <Tooltip content="Average Buy Price">ABP</Tooltip> and par{" "}
-                    <Tooltip content="Price Per Trade">PPT</Tooltip> for extra
+                    Beat the par{" "}
+                    <Tooltip content="Average Buy Price">ABP</Tooltip> and{" "}
+                    <Tooltip content="Profit Per Trade">PPT</Tooltip> for extra
                     points
                   </span>
                 </li>
