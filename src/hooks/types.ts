@@ -4,6 +4,8 @@ export interface StockSymbol {
   symbol: string;
   name: string;
   sector?: string;
+  wikiLink?: string;
+  stockLink?: string;
 }
 
 export interface DateRange {

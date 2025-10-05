@@ -10,6 +10,8 @@ export interface StockSymbol {
   symbol: string;
   name: string;
   sector?: string;
+  wiki_link?: string;
+  stock_link?: string;
 }
 
 // Generate random date range between 2012 and 2025, 1-5 years duration

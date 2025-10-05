@@ -1,5 +1,8 @@
 import type { CondensedDataPoint } from "./gameCalculations.ts";
 
+// Re-export for use in other modules
+export type { CondensedDataPoint };
+
 // Raw stock price interface
 export interface RawStockPrice {
   date: string;

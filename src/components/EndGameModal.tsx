@@ -142,11 +142,56 @@ Play at daytradle.com`;
               <div className="text-base sm:text-lg text-slate-600 dark:text-slate-400 font-semibold">
                 {stockInfo.name}
               </div>
-              <div className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
+              <div className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mb-3">
                 {stockInfo.sector} •{" "}
                 {new Date(dateRange.startDate).getFullYear()}-
                 {new Date(dateRange.endDate).getFullYear()}
               </div>
+              {/* Links to Wikipedia and Stock Info */}
+              {(stockInfo.wikiLink || stockInfo.stockLink) && (
+                <div className="flex justify-center gap-3 mt-4">
+                  {stockInfo.wikiLink && (
+                    <a
+                      href={stockInfo.wikiLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-full transition-colors duration-200"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 9h-1.321c-.058-.47-.14-.94-.244-1.41a9.99 9.99 0 001.565 1.41zm-1.821 3.001c.027-.333.046-.667.046-1.001s-.019-.668-.046-1.001h2.06c.086.327.135.668.135 1.001s-.049.674-.135 1.001h-2.06zm-5.073 6.74V15h2v3.74c-.322.03-.648.046-.975.046s-.653-.016-.975-.046h-.05zm0-6.741V9h2v3h-2zm0-5V3.26c.322-.03.648-.046.975-.046s.653.016.975.046V7h-2zm6.554 0c-.104-.47-.186-.94-.244-1.41a9.99 9.99 0 001.565-1.41h-1.321zm-9.106 0h-1.321a9.99 9.99 0 001.565 1.41c-.104.47-.186.94-.244 1.41zm0 6h-1.321c.058.47.14.94.244 1.41a9.99 9.99 0 01-1.565-1.41h1.321zm9.106 0h1.321a9.99 9.99 0 01-1.565 1.41c.104-.47.186-.94.244-1.41z" />
+                      </svg>
+                      Wikipedia
+                    </a>
+                  )}
+                  {stockInfo.stockLink && (
+                    <a
+                      href={stockInfo.stockLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-slate-700 rounded-full transition-colors duration-200"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                        />
+                      </svg>
+                      Stock Info
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

@@ -9,6 +9,8 @@ export interface DailyChallenge {
   tickerSymbol: string;
   companyName: string;
   sector: string | null;
+  wikiLink?: string | null;
+  stockLink?: string | null;
   startYear: number;
   endYear: number;
   startDate: string;
@@ -83,6 +85,8 @@ export const useDailyChallenge = (): UseDailyChallengeResult => {
         tickerSymbol: data.ticker_symbol,
         companyName: data.company_name,
         sector: data.sector,
+        wikiLink: data.wiki_link,
+        stockLink: data.stock_link,
         startYear: data.start_year,
         endYear: data.end_year,
         startDate: data.start_date,
@@ -171,6 +175,8 @@ export const useChallengeByDay = (day: number): UseDailyChallengeResult => {
         tickerSymbol: data.ticker_symbol,
         companyName: data.company_name,
         sector: data.sector,
+        wikiLink: data.wiki_link,
+        stockLink: data.stock_link,
         startYear: data.start_year,
         endYear: data.end_year,
         startDate: data.start_date,

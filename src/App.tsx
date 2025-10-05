@@ -41,6 +41,8 @@ function App() {
     symbol: string;
     name: string;
     sector?: string;
+    wikiLink?: string;
+    stockLink?: string;
   } | null>(null);
   const [gameData, setGameData] = useState<CondensedDataPoint[]>([]);
   const [currentDataIndex, setCurrentDataIndex] = useState(0);
@@ -92,6 +94,8 @@ function App() {
         symbol: challenge.tickerSymbol,
         name: challenge.companyName,
         sector: challenge.sector || undefined,
+        wikiLink: challenge.wikiLink || undefined,
+        stockLink: challenge.stockLink || undefined,
       });
 
       // Set game data from challenge

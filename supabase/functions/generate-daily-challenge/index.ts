@@ -29,6 +29,8 @@ interface DailyChallengeData {
   ticker_symbol: string;
   company_name: string;
   sector: string | null;
+  wiki_link?: string | null;
+  stock_link?: string | null;
   start_year: number;
   end_year: number;
   start_date: string;
@@ -154,6 +156,8 @@ serve(async (req) => {
       ticker_symbol: selectedStock.symbol,
       company_name: selectedStock.name,
       sector: selectedStock.sector || null,
+      wiki_link: (selectedStock as any).wiki_link || null,
+      stock_link: (selectedStock as any).stock_link || null,
       start_year: new Date(dateRange.startDate).getFullYear(),
       end_year: new Date(dateRange.endDate).getFullYear(),
       start_date: dateRange.startDate,
