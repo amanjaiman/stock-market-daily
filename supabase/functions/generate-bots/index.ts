@@ -50,20 +50,20 @@ const LAST_NAMES = [
 
 // Common username words people actually use
 const USERNAME_WORDS = [
-  "shadow", "dark", "silent", "thunder", "lightning", "fire", "ice", "storm",
-  "night", "moon", "star", "sun", "sky", "cloud", "rain", "snow",
-  "wolf", "lion", "tiger", "bear", "fox", "eagle", "hawk", "dragon",
-  "ninja", "warrior", "knight", "ghost", "phantom", "cyber", "cosmic", "mystic",
-  "pixel", "neon", "retro", "cool", "epic", "mega", "ultra", "super",
-  "legend", "hero", "ace", "pro", "master", "chief", "king", "queen",
-  "blue", "red", "green", "gold", "silver", "crimson", "azure", "violet",
-  "lucky", "happy", "wild", "crazy", "chill", "zen", "fierce", "swift"
+  "shadow", "dark", "silent", "night", "moon", "star", "sky", "cloud",
+  "wolf", "lion", "tiger", "bear", "fox", "eagle", "hawk", "raven",
+  "ghost", "blade", "steel", "iron", "stone", "ash", "dust", "storm",
+  "blue", "red", "black", "white", "grey", "silver", "gold", "jade",
+  "neo", "zen", "ace", "max", "rex", "blaze", "frost", "nova",
+  "byte", "pixel", "tech", "cyber", "digital", "code", "dev", "web",
+  "sonic", "flash", "dash", "bolt", "pulse", "echo", "void", "drift",
+  "atlas", "cipher", "delta", "omega", "nexus", "apex", "prime", "vector"
 ];
 
 const GAMING_WORDS = [
-  "gamer", "player", "noob", "veteran", "legend", "champion", "winner", "beast",
-  "killer", "sniper", "tank", "warrior", "mage", "ranger", "rogue", "hunter",
-  "slayer", "crusher", "destroyer", "warlord", "overlord", "supreme", "elite", "alpha"
+  "gamer", "player", "legend", "ace", "elite", "alpha", "omega", "prime",
+  "nexus", "phantom", "ghost", "shadow", "stealth", "ninja", "swift", "blade",
+  "viper", "hunter", "scout", "ranger", "titan", "atlas", "striker", "frost"
 ];
 
 const CASUAL_NAMES = [
@@ -80,144 +80,137 @@ const CASUAL_NAMES = [
   "vic", "pat", "ash", "corey", "morgan", "quinn", "avery", "reese"
 ];
 
-const RANDOM_NOUNS = [
-  "potato", "banana", "pickle", "waffle", "taco", "burrito", "pizza", "cookie",
-  "panda", "koala", "penguin", "octopus", "narwhal", "unicorn", "llama", "dino",
-  "wizard", "robot", "pirate", "zombie", "alien", "astronaut", "samurai", "viking"
+const NEUTRAL_WORDS = [
+  "north", "south", "east", "west", "orbit", "cosmos", "solar", "lunar",
+  "atom", "ion", "flux", "wave", "tide", "core", "edge", "peak",
+  "ghost", "shade", "mist", "haze", "drift", "shift", "phase", "mode",
+  "link", "node", "sync", "mesh", "grid", "zone", "base", "hub"
 ];
 
-const ADJECTIVES = [
-  "cool", "epic", "mega", "super", "hyper", "turbo", "ultra", "max",
-  "mini", "tiny", "big", "giant", "quick", "fast", "slow", "lazy",
-  "happy", "sad", "angry", "calm", "wild", "tame", "hot", "cold",
-  "smart", "clever", "wise", "silly", "goofy", "random", "weird", "odd"
+const SIMPLE_DESCRIPTORS = [
+  "cool", "true", "real", "pure", "raw", "fresh", "new", "old",
+  "red", "blue", "dark", "light", "deep", "high", "low", "mid",
+  "fast", "slow", "wild", "calm", "bold", "wise", "keen", "bright"
 ];
 
 // Generate a realistic display name that looks like actual internet usernames
 function generateDisplayName(random: SeededRandom): string {
   const nameType = random.next();
   
-  // 4% chance: Full name (FirstName LastName)
-  if (nameType < 0.04) {
-    const firstName = FIRST_NAMES[random.nextInt(0, FIRST_NAMES.length - 1)];
-    const lastName = LAST_NAMES[random.nextInt(0, LAST_NAMES.length - 1)];
-    return `${firstName} ${lastName}`;
+  // 15% chance: Name variations (bobjac, bobbyj, sarahmiller, etc)
+  if (nameType < 0.15) {
+    const firstName = FIRST_NAMES[random.nextInt(0, FIRST_NAMES.length - 1)].toLowerCase();
+    const lastName = LAST_NAMES[random.nextInt(0, LAST_NAMES.length - 1)].toLowerCase();
+    const style = random.next();
+    
+    if (style < 0.35) {
+      // First name + first 3-4 letters of last (bobjac, sarahmil)
+      const lastChars = random.nextInt(3, 4);
+      return `${firstName}${lastName.substring(0, lastChars)}`;
+    } else if (style < 0.60) {
+      // First 3-5 letters + last initial (bobjo, sarj, mikesmith)
+      if (random.next() < 0.5) {
+        const firstChars = random.nextInt(3, Math.min(5, firstName.length));
+        return `${firstName.substring(0, firstChars)}${lastName[0]}`;
+      } else {
+        return `${firstName}${lastName}`;
+      }
+    } else if (style < 0.75) {
+      // Nickname variations (bobby, mike, sam, etc)
+      const nicknames: { [key: string]: string } = {
+        'robert': 'bob', 'bob': 'bobby', 'michael': 'mike', 'mike': 'mikey',
+        'william': 'will', 'james': 'jim', 'richard': 'rick', 'daniel': 'dan',
+        'matthew': 'matt', 'christopher': 'chris', 'benjamin': 'ben', 'joseph': 'joe'
+      };
+      const nickname = nicknames[firstName] || firstName;
+      if (random.next() < 0.3) {
+        const lastChar = lastName[0];
+        return `${nickname}${lastChar}`;
+      } else {
+        return nickname;
+      }
+    } else {
+      // Just first name
+      return firstName;
+    }
   }
   
-  // 3% chance: First name + Last initial (Sarah M.)
-  else if (nameType < 0.07) {
-    const firstName = FIRST_NAMES[random.nextInt(0, FIRST_NAMES.length - 1)];
-    const lastInitial = LAST_NAMES[random.nextInt(0, LAST_NAMES.length - 1)][0];
-    return `${firstName} ${lastInitial}.`;
-  }
-  
-  // 28% chance: Casual name variations (mike23, sarah_k, brianpa, etc)
-  else if (nameType < 0.35) {
+  // 25% chance: Casual name variations (mike, brianpa, sarah, etc)
+  else if (nameType < 0.40) {
     const base = CASUAL_NAMES[random.nextInt(0, CASUAL_NAMES.length - 1)];
     const format = random.next();
-    if (format < 0.30) {
-      // Just numbers (mike23)
+    if (format < 0.15) {
+      // Rare numbers (mike23)
       const num = random.nextInt(1, 99);
       return `${base}${num}`;
-    } else if (format < 0.35) {
-      // With underscore + letter (sarah_k) - rare
-      const letter = String.fromCharCode(97 + random.nextInt(0, 25));
-      return `${base}_${letter}`;
-    } else if (format < 0.60) {
-      // Add "pa" or similar (brianpa)
-      const suffixes = ["pa", "la", "ma", "da", "ra", "ka", "ta", "na", "sa", "wa"];
+    } else if (format < 0.45) {
+      // Add suffix (brianpa, mikela, sarahka)
+      const suffixes = ["pa", "la", "ma", "da", "ra", "ka", "ta", "na", "sa", "wa", "ya"];
       const suffix = suffixes[random.nextInt(0, suffixes.length - 1)];
       return `${base}${suffix}`;
-    } else if (format < 0.85) {
-      // Year-style (mike94, sarah07, mike85, sarah01)
-      const yearFull = random.nextInt(85, 109); // 1985-2009
-      const yearStr = yearFull < 100 ? `${yearFull}` : `0${yearFull - 100}`;
-      return `${base}${yearStr}`;
     } else {
       // Just the name
       return base;
     }
   }
   
-  // 15% chance: Two word combos (shadowwolf, happypanda, epicgamer)
-  else if (nameType < 0.50) {
+  // 20% chance: Two word combos (shadowwolf, darkmoon, ghostblade)
+  else if (nameType < 0.60) {
     const word1 = USERNAME_WORDS[random.nextInt(0, USERNAME_WORDS.length - 1)];
     const word2 = USERNAME_WORDS[random.nextInt(0, USERNAME_WORDS.length - 1)];
-    const separator = random.next();
-    if (separator < 0.75) {
+    if (random.next() < 0.92) {
       // No separator (most common)
       return `${word1}${word2}`;
-    } else if (separator < 0.85) {
-      // With numbers
-      const num = random.nextInt(1, 99);
+    } else {
+      // Rare numbers
+      const num = random.nextInt(1, 9);
       return `${word1}${word2}${num}`;
-    } else {
-      // With underscore (rare)
-      return `${word1}_${word2}`;
     }
   }
   
-  // 12% chance: Adjective + Noun combos (happypanda, lazypotato)
-  else if (nameType < 0.62) {
-    const adj = ADJECTIVES[random.nextInt(0, ADJECTIVES.length - 1)];
-    const noun = RANDOM_NOUNS[random.nextInt(0, RANDOM_NOUNS.length - 1)];
-    const comboStyle = random.next();
-    if (comboStyle < 0.70) {
+  // 15% chance: Descriptor + Word combos (darkwolf, redmoon, cooltech)
+  else if (nameType < 0.75) {
+    const desc = SIMPLE_DESCRIPTORS[random.nextInt(0, SIMPLE_DESCRIPTORS.length - 1)];
+    const word = NEUTRAL_WORDS[random.nextInt(0, NEUTRAL_WORDS.length - 1)];
+    if (random.next() < 0.93) {
       // No separator (most common)
-      return `${adj}${noun}`;
-    } else if (comboStyle < 0.85) {
-      // With numbers
-      const num = random.nextInt(1, 999);
-      return `${adj}${noun}${num}`;
+      return `${desc}${word}`;
     } else {
-      // With underscore (rare)
-      return `${adj}_${noun}`;
+      // Rare numbers
+      const num = random.nextInt(1, 9);
+      return `${desc}${word}${num}`;
     }
   }
   
-  // 8% chance: Gaming usernames (xXNinjaXx, Pro_Gamer420, etc)
-  else if (nameType < 0.70) {
+  // 10% chance: Gaming usernames (ninja, gamer, legend, etc)
+  else if (nameType < 0.85) {
     const word = GAMING_WORDS[random.nextInt(0, GAMING_WORDS.length - 1)];
-    const style = random.next();
-    if (style < 0.35) {
-      // xX style
-      return `xX${word}Xx`;
-    } else if (style < 0.70) {
-      // With numbers
-      const num = random.nextInt(1, 999);
-      return `${word}${num}`;
-    } else if (style < 0.90) {
-      // Pro/The prefix
-      const prefix = random.next() < 0.5 ? "Pro" : "The";
-      return `${prefix}${word}`;
-    } else {
-      // Two words no separator
-      const word2 = GAMING_WORDS[random.nextInt(0, GAMING_WORDS.length - 1)];
-      return `${word}${word2}`;
-    }
-  }
-  
-  // 7% chance: Name + word combos (sarahgamer, mikethebest, etc)
-  else if (nameType < 0.77) {
-    const name = CASUAL_NAMES[random.nextInt(0, CASUAL_NAMES.length - 1)];
-    const word = USERNAME_WORDS[random.nextInt(0, USERNAME_WORDS.length - 1)];
     if (random.next() < 0.85) {
-      // No separator (most common)
-      return `${name}${word}`;
-    } else {
-      // With underscore (rare)
-      return `${name}_${word}`;
-    }
-  }
-  
-  // 23% chance: Random single word with numbers
-  else {
-    const allWords = [...USERNAME_WORDS, ...RANDOM_NOUNS, ...GAMING_WORDS];
-    const word = allWords[random.nextInt(0, allWords.length - 1)];
-    if (random.next() < 0.35) {
+      // Just the word
       return word;
     } else {
-      const num = random.nextInt(1, 9999);
+      // Rare numbers
+      const num = random.nextInt(1, 9);
+      return `${word}${num}`;
+    }
+  }
+  
+  // 8% chance: Name + word combos (mikeshadow, sarahwolf, etc)
+  else if (nameType < 0.93) {
+    const name = CASUAL_NAMES[random.nextInt(0, CASUAL_NAMES.length - 1)];
+    const word = USERNAME_WORDS[random.nextInt(0, USERNAME_WORDS.length - 1)];
+    return `${name}${word}`;
+  }
+  
+  // 7% chance: Random single word
+  else {
+    const allWords = [...USERNAME_WORDS, ...NEUTRAL_WORDS, ...GAMING_WORDS];
+    const word = allWords[random.nextInt(0, allWords.length - 1)];
+    if (random.next() < 0.90) {
+      return word;
+    } else {
+      // Very rare numbers
+      const num = random.nextInt(1, 9);
       return `${word}${num}`;
     }
   }

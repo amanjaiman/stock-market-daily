@@ -19,6 +19,11 @@ import {
   saveLeaderboardEntry,
   getEntryForDay,
 } from "./utils/leaderboardStorage";
+import {
+  trackPageView,
+  trackGameStarted,
+  trackGameCompleted,
+} from "./services/analyticsService";
 
 interface StockData {
   price: number;
@@ -83,6 +88,11 @@ function App() {
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
   const [showGameModal, setShowGameModal] = useState(true); // Will be updated based on hasPlayedToday
   const [hasPlayedToday, setHasPlayedToday] = useState(false);
+
+  // Track page view on mount (analytics)
+  useEffect(() => {
+    trackPageView();
+  }, []);
 
   // Initialize game data from daily challenge
   useEffect(() => {
@@ -246,9 +256,14 @@ function App() {
         // Start the game
         setGameState("active");
         setCountdownValue(5); // Reset for next time
+
+        // Track game started (analytics)
+        if (challenge?.day) {
+          trackGameStarted(challenge.day);
+        }
       }
     }
-  }, [gameState, countdownValue]);
+  }, [gameState, countdownValue, challenge]);
 
   // Save game results when game state changes to "ended"
   useEffect(() => {
@@ -276,6 +291,12 @@ function App() {
       ).catch((error) => {
         console.error("Error saving leaderboard entry:", error);
       });
+
+      // Track game completed (analytics)
+      const won = finalValue >= gameParameters.targetValue;
+      const existingEntry = getEntryForDay(challenge.day);
+      const numTries = existingEntry ? existingEntry.num_tries + 1 : 1;
+      trackGameCompleted(challenge.day, finalValue, won, numTries);
     }
   }, [
     gameState,

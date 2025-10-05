@@ -49,3 +49,22 @@ export interface LeaderboardRow {
   created_at: string;
   updated_at: string;
 }
+
+export interface AnalyticsEventRow {
+  id: string;
+  event_type: 'page_view' | 'game_started' | 'game_completed';
+  user_uuid: string;
+  day?: number;
+  session_id?: string;
+  metadata?: any; // JSONB data
+  created_at: string;
+}
+
+export interface DailyAnalyticsRow {
+  date: string;
+  unique_visitors: number;
+  unique_players: number;
+  total_games_started: number;
+  total_games_completed: number;
+  unique_sessions: number;
+}
