@@ -99,7 +99,7 @@ function EndGameModal({
       100;
 
     // Build share text
-    const shareText = `Tradle #${day} ${performanceEmojis.join("")}
+    const shareText = `DayTradle #${day} ${performanceEmojis.join("")}
 Final Value: ${formatCurrency(playerStats.finalValue)} (${
       returnPercent >= 0 ? "+" : ""
     }${returnPercent.toFixed(1)}%)${
