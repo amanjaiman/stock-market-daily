@@ -8,6 +8,10 @@ import {
   getLeaderboardForDay,
   getUserRankForDay,
 } from "../services/leaderboardService";
+import {
+  trackLeaderboardViewed,
+  trackNameEntered,
+} from "../services/analyticsService";
 import type { LeaderboardRow } from "../lib/supabase";
 import { useDailyChallenge } from "../hooks";
 
@@ -33,7 +37,12 @@ function LeaderboardModal({ onClose }: LeaderboardModalProps) {
     } else {
       setIsEnteringName(true);
     }
-  }, []);
+
+    // Track leaderboard viewed
+    if (challenge?.day) {
+      trackLeaderboardViewed(challenge.day);
+    }
+  }, [challenge]);
 
   // Fetch leaderboard data when user is set and we have challenge data
   useEffect(() => {
@@ -91,6 +100,11 @@ function LeaderboardModal({ onClose }: LeaderboardModalProps) {
 
     setUserName(trimmedName);
     setIsEnteringName(false);
+
+    // Track name entry
+    if (challenge?.day) {
+      trackNameEntered(challenge.day, trimmedName.length);
+    }
   };
 
   return (

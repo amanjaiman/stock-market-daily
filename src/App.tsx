@@ -1277,6 +1277,7 @@ function App() {
           onLeaderboardClick={handleLeaderboardClick}
           onResultsClick={handleResultsClick}
           gameState={gameState}
+          day={challenge.day}
         />
       )}
 

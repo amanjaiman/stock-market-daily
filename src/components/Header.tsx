@@ -1,4 +1,10 @@
 import React, { useEffect, useState } from "react";
+import {
+  trackHeaderLeaderboardClicked,
+  trackHeaderResultsClicked,
+  trackHeaderHelpClicked,
+  trackHeaderThemeToggled,
+} from "../services/analyticsService";
 
 interface HeaderProps {
   onLeaderboardClick?: () => void;
@@ -36,7 +42,9 @@ const Header: React.FC<HeaderProps> = ({
   }, [isDark]);
 
   const toggleTheme = () => {
+    const newTheme = !isDark ? "dark" : "light";
     setIsDark(!isDark);
+    trackHeaderThemeToggled(newTheme);
   };
   return (
     <header className="w-full bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
@@ -59,7 +67,10 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-1 sm:gap-2 justify-end sm:flex-1">
             {/* Leaderboard */}
             <button
-              onClick={onLeaderboardClick}
+              onClick={() => {
+                trackHeaderLeaderboardClicked();
+                onLeaderboardClick?.();
+              }}
               className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200 group"
               title="Leaderboard"
             >
@@ -82,7 +93,10 @@ const Header: React.FC<HeaderProps> = ({
             <button
               onClick={
                 gameState === "ended" || hasPlayedToday
-                  ? onResultsClick
+                  ? () => {
+                      trackHeaderResultsClicked(gameState, hasPlayedToday);
+                      onResultsClick?.();
+                    }
                   : undefined
               }
               className={`p-1.5 sm:p-2 rounded-lg transition-colors duration-200 group ${
@@ -114,7 +128,10 @@ const Header: React.FC<HeaderProps> = ({
 
             {/* Help */}
             <button
-              onClick={onHelpClick}
+              onClick={() => {
+                trackHeaderHelpClicked();
+                onHelpClick?.();
+              }}
               className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200 group"
               title="Help"
             >

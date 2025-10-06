@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import type { StockSymbol, DateRange } from "../hooks";
 import type { GameParameters, ParPerformance } from "../utils/gameCalculations";
+import {
+  trackResultsCopied,
+  trackLeaderboardClicked,
+  trackPlayAgainClicked,
+} from "../services/analyticsService";
 
 interface EndGameModalProps {
   isWinner: boolean;
@@ -247,6 +252,9 @@ Play at daytradle.com`;
                   await navigator.clipboard.writeText(generateShareText());
                   setCopySuccess(true);
                   setTimeout(() => setCopySuccess(false), 2000);
+
+                  // Track results copied
+                  trackResultsCopied(day, isWinner, playerStats.finalValue);
                 }}
                 className={`font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 text-sm sm:text-base ${
                   copySuccess
@@ -258,7 +266,10 @@ Play at daytradle.com`;
               </button>
 
               <button
-                onClick={onLeaderboardClick}
+                onClick={() => {
+                  trackLeaderboardClicked(day, isWinner);
+                  onLeaderboardClick();
+                }}
                 className="font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white text-sm sm:text-base"
               >
                 Leaderboard
@@ -405,7 +416,10 @@ Play at daytradle.com`;
             Close
           </button>
           <button
-            onClick={onPlayAgain}
+            onClick={() => {
+              trackPlayAgainClicked(day, isWinner);
+              onPlayAgain();
+            }}
             className="font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white text-sm sm:text-base"
           >
             Play again

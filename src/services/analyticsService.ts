@@ -5,7 +5,25 @@
 
 import { supabase } from '../lib/supabase';
 
-export type EventType = 'page_view' | 'game_started' | 'game_completed';
+export type EventType = 
+  | 'page_view' 
+  | 'game_started' 
+  | 'game_completed' 
+  | 'leaderboard_viewed' 
+  | 'name_entered' 
+  | 'results_copied' 
+  | 'leaderboard_clicked' 
+  | 'play_again_clicked'
+  | 'header_leaderboard_clicked'
+  | 'header_results_clicked'
+  | 'header_help_clicked'
+  | 'header_theme_toggled'
+  | 'modal_close_clicked'
+  | 'modal_start_clicked'
+  | 'modal_play_again_clicked'
+  | 'modal_rules_toggled'
+  | 'modal_leaderboard_clicked'
+  | 'modal_results_clicked';
 
 export interface AnalyticsEvent {
   event_type: EventType;
@@ -117,6 +135,145 @@ export const trackGameCompleted = (
     final_value: finalValue, 
     won,
     num_tries: numTries 
+  });
+};
+
+/**
+ * Track leaderboard viewed
+ */
+export const trackLeaderboardViewed = (day?: number): void => {
+  trackEvent('leaderboard_viewed', day);
+};
+
+/**
+ * Track user entering their name for leaderboard
+ */
+export const trackNameEntered = (day?: number, nameLength?: number): void => {
+  trackEvent('name_entered', day, { 
+    name_length: nameLength 
+  });
+};
+
+/**
+ * Track results copied to clipboard (sharing)
+ */
+export const trackResultsCopied = (day: number, won: boolean, finalValue?: number): void => {
+  trackEvent('results_copied', day, { 
+    won,
+    final_value: finalValue 
+  });
+};
+
+/**
+ * Track leaderboard button clicked from end game modal
+ */
+export const trackLeaderboardClicked = (day: number, won: boolean): void => {
+  trackEvent('leaderboard_clicked', day, { 
+    won 
+  });
+};
+
+/**
+ * Track play again button clicked from end game modal
+ */
+export const trackPlayAgainClicked = (day: number, won: boolean): void => {
+  trackEvent('play_again_clicked', day, { 
+    won 
+  });
+};
+
+// ============================================================================
+// Header Analytics
+// ============================================================================
+
+/**
+ * Track leaderboard button clicked in header
+ */
+export const trackHeaderLeaderboardClicked = (): void => {
+  trackEvent('header_leaderboard_clicked');
+};
+
+/**
+ * Track results/share button clicked in header
+ */
+export const trackHeaderResultsClicked = (gameState?: string, hasPlayedToday?: boolean): void => {
+  trackEvent('header_results_clicked', undefined, { 
+    game_state: gameState,
+    has_played_today: hasPlayedToday
+  });
+};
+
+/**
+ * Track help button clicked in header
+ */
+export const trackHeaderHelpClicked = (): void => {
+  trackEvent('header_help_clicked');
+};
+
+/**
+ * Track theme toggle in header
+ */
+export const trackHeaderThemeToggled = (newTheme: 'light' | 'dark'): void => {
+  trackEvent('header_theme_toggled', undefined, { 
+    new_theme: newTheme
+  });
+};
+
+// ============================================================================
+// GameModal Analytics
+// ============================================================================
+
+/**
+ * Track close button clicked in game modal
+ */
+export const trackModalCloseClicked = (gameState?: string, hasPlayedToday?: boolean): void => {
+  trackEvent('modal_close_clicked', undefined, { 
+    game_state: gameState,
+    has_played_today: hasPlayedToday
+  });
+};
+
+/**
+ * Track start challenge button clicked in game modal
+ */
+export const trackModalStartClicked = (day?: number): void => {
+  trackEvent('modal_start_clicked', day);
+};
+
+/**
+ * Track play again button clicked in game modal
+ */
+export const trackModalPlayAgainClicked = (hasPlayedToday?: boolean): void => {
+  trackEvent('modal_play_again_clicked', undefined, { 
+    has_played_today: hasPlayedToday
+  });
+};
+
+/**
+ * Track rules accordion toggled in game modal
+ */
+export const trackModalRulesToggled = (expanded: boolean, gameState?: string): void => {
+  trackEvent('modal_rules_toggled', undefined, { 
+    expanded,
+    game_state: gameState
+  });
+};
+
+/**
+ * Track leaderboard button clicked in game modal
+ */
+export const trackModalLeaderboardClicked = (hasPlayedToday?: boolean): void => {
+  trackEvent('modal_leaderboard_clicked', undefined, { 
+    has_played_today: hasPlayedToday
+  });
+};
+
+/**
+ * Track results button clicked in game modal
+ */
+export const trackModalResultsClicked = (hasPlayedToday?: boolean): void => {
+  trackEvent('modal_results_clicked', undefined, { 
+    has_played_today: hasPlayedToday
   });
 };
 

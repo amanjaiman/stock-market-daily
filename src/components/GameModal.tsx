@@ -27,10 +27,19 @@ interface GameModalProps {
   onLeaderboardClick?: () => void;
   onResultsClick?: () => void;
   gameState?: GameState;
+  day?: number;
 }
 
 import { useState, useEffect } from "react";
 import Tooltip from "./Tooltip";
+import {
+  trackModalCloseClicked,
+  trackModalStartClicked,
+  trackModalPlayAgainClicked,
+  trackModalRulesToggled,
+  trackModalLeaderboardClicked,
+  trackModalResultsClicked,
+} from "../services/analyticsService";
 
 function GameModal({
   startingCash,
@@ -47,6 +56,7 @@ function GameModal({
   onLeaderboardClick,
   onResultsClick,
   gameState = "pre-game",
+  day,
 }: GameModalProps) {
   const [rulesExpanded, setRulesExpanded] = useState(false);
 
@@ -115,7 +125,10 @@ function GameModal({
             <div className="flex items-center justify-center gap-2 mt-2">
               {/* Leaderboard */}
               <button
-                onClick={onLeaderboardClick}
+                onClick={() => {
+                  trackModalLeaderboardClicked(hasPlayedToday);
+                  onLeaderboardClick?.();
+                }}
                 className="p-2 rounded-lg hover:bg-[#e6e6e6] dark:hover:bg-slate-700 transition-colors duration-200 group"
                 title="Leaderboard"
               >
@@ -136,7 +149,10 @@ function GameModal({
 
               {/* Results/Share */}
               <button
-                onClick={onResultsClick}
+                onClick={() => {
+                  trackModalResultsClicked(hasPlayedToday);
+                  onResultsClick?.();
+                }}
                 className="p-2 rounded-lg hover:bg-[#e6e6e6] dark:hover:bg-slate-700 transition-colors duration-200 group"
                 title="Results & Share"
               >
@@ -236,7 +252,11 @@ function GameModal({
 
         <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden">
           <button
-            onClick={() => setRulesExpanded(!rulesExpanded)}
+            onClick={() => {
+              const newExpanded = !rulesExpanded;
+              setRulesExpanded(newExpanded);
+              trackModalRulesToggled(newExpanded, gameState);
+            }}
             className="w-full px-4 sm:px-6 py-3 sm:py-4 text-left hover:bg-[#e6e6e6] dark:hover:bg-slate-700 transition-colors duration-200 group"
           >
             <div className="flex items-center gap-3">
@@ -315,7 +335,10 @@ function GameModal({
           // Show only close button when game is in progress
           <div className="flex justify-center mt-6 sm:mt-8">
             <button
-              onClick={onClose}
+              onClick={() => {
+                trackModalCloseClicked(gameState, hasPlayedToday);
+                onClose();
+              }}
               className="font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-slate-600 hover:bg-slate-700 text-white text-sm sm:text-base"
             >
               Close
@@ -324,13 +347,19 @@ function GameModal({
         ) : hasPlayedToday ? (
           <div className="flex justify-center gap-3 sm:gap-4 mt-6 sm:mt-8">
             <button
-              onClick={onClose}
+              onClick={() => {
+                trackModalCloseClicked(gameState, hasPlayedToday);
+                onClose();
+              }}
               className="font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-slate-600 hover:bg-slate-700 text-white text-sm sm:text-base"
             >
               Close
             </button>
             <button
-              onClick={onPlayAgain}
+              onClick={() => {
+                trackModalPlayAgainClicked(hasPlayedToday);
+                onPlayAgain();
+              }}
               className="font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white text-sm sm:text-base"
             >
               Play again
@@ -338,7 +367,10 @@ function GameModal({
           </div>
         ) : (
           <button
-            onClick={onStart}
+            onClick={() => {
+              trackModalStartClicked(day);
+              onStart();
+            }}
             className="mt-6 sm:mt-8 w-full font-medium text-base sm:text-lg py-3 sm:py-4 px-6 sm:px-8 rounded-3xl floating-button bounce-click transition-all duration-200 bg-green-500 hover:bg-green-600 text-white"
           >
             Start Challenge
