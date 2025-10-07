@@ -106,50 +106,99 @@ serve(async (req) => {
       throw new Error('No stocks found in database. Please run seed-stocks first.');
     }
 
-    // 1. Pick random stock based on today's seed
     const seed = getDailySeed();
-    const selectedStock = getRandomStockWithSeed(allStocks, seed);
+    const maxTotalAttempts = 50; // Try up to 50 different stock/date combinations
+    let totalAttempts = 0;
+    let selectedStock!: any;
+    let dateRange!: DateRange;
+    let condensedData!: any;
+    let gameParams!: GameParameters;
+    let parPerformance!: ParPerformance;
+    let validChallengeFound = false;
 
-    // 2. Generate random date range (deterministic based on seed)
-    let dateRange: DateRange;
-    let attempts = 0;
-    const maxAttempts = 10;
+    // Keep trying different stocks and date ranges until we find a viable challenge
+    while (!validChallengeFound && totalAttempts < maxTotalAttempts) {
+      // 1. Pick stock based on seed + attempt number
+      selectedStock = getRandomStockWithSeed(allStocks, seed + totalAttempts);
+      console.log(`Attempt ${totalAttempts + 1}: Trying stock ${selectedStock.symbol}`);
 
-    // Keep generating until we get a valid range or hit max attempts
-    do {
-      dateRange = generateRandomDateRange(seed + attempts);
-      attempts++;
-    } while (!isValidDateRange(dateRange) && attempts < maxAttempts);
+      // 2. Try multiple date ranges for this stock
+      let dateRangeAttempts = 0;
+      const maxDateRangeAttempts = 5;
+      
+      while (dateRangeAttempts < maxDateRangeAttempts && !validChallengeFound) {
+        // Generate random date range
+        const dateRangeSeed = seed + totalAttempts * 100 + dateRangeAttempts;
+        dateRange = generateRandomDateRange(dateRangeSeed);
+        
+        // Validate date range
+        if (!isValidDateRange(dateRange)) {
+          console.log(`  Date range attempt ${dateRangeAttempts + 1}: Invalid date range, trying next`);
+          dateRangeAttempts++;
+          totalAttempts++;
+          continue;
+        }
 
-    // If we still don't have a valid range, create a fallback
-    if (!isValidDateRange(dateRange)) {
-      const endDate = new Date(2023, 11, 31); // Dec 31, 2023
-      const startDate = new Date(2021, 11, 31); // Dec 31, 2021
+        console.log(`  Date range attempt ${dateRangeAttempts + 1}: ${dateRange.startDate} to ${dateRange.endDate}`);
 
-      dateRange = {
-        startDate: `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`,
-        endDate: `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-${String(endDate.getDate()).padStart(2, "0")}`,
-        days: 504, // Approximately 2 years of trading days
-      };
+        try {
+          // 3. Fetch real stock data
+          const rawPrices: RawStockPrice[] = await fetchStockData(
+            selectedStock.symbol, 
+            dateRange.startDate, 
+            dateRange.endDate
+          );
+
+          // 4. Condense data to 300 points
+          condensedData = condenseStockData(rawPrices);
+
+          // 5. Calculate game parameters
+          gameParams = calculateGameParameters(condensedData);
+
+          // 6. Validate that target value is greater than starting cash
+          // This ensures the challenge is winnable and makes financial sense
+          if (gameParams.targetValue <= gameParams.startingCash) {
+            console.log(`  ❌ Target value ($${gameParams.targetValue}) <= Starting cash ($${gameParams.startingCash}). Rejecting.`);
+            dateRangeAttempts++;
+            totalAttempts++;
+            continue;
+          }
+
+          // Additional validation: ensure target return is at least 5%
+          if (gameParams.targetReturnPercentage < 5) {
+            console.log(`  ❌ Target return too low (${gameParams.targetReturnPercentage}%). Rejecting.`);
+            dateRangeAttempts++;
+            totalAttempts++;
+            continue;
+          }
+
+          // 7. Calculate par performance
+          parPerformance = calculateParPerformance(condensedData, gameParams);
+
+          // If we made it here, we have a valid challenge!
+          console.log(`  ✅ Valid challenge found! Target: $${gameParams.targetValue}, Return: ${gameParams.targetReturnPercentage}%`);
+          validChallengeFound = true;
+
+        } catch (error) {
+          console.log(`  Error fetching/processing data: ${error.message}`);
+          dateRangeAttempts++;
+          totalAttempts++;
+          continue;
+        }
+      }
+
+      // If we exhausted date ranges for this stock, move to next stock
+      if (!validChallengeFound) {
+        totalAttempts++;
+      }
     }
 
-    // 3. Fetch real stock data
-    const rawPrices: RawStockPrice[] = await fetchStockData(
-      selectedStock.symbol, 
-      dateRange.startDate, 
-      dateRange.endDate
-    );
+    // If we couldn't find a valid challenge after all attempts, throw error
+    if (!validChallengeFound) {
+      throw new Error(`Could not generate a valid challenge after ${totalAttempts} attempts. All stock/date combinations resulted in negative or minimal returns.`);
+    }
 
-    // 4. Condense data to 300 points
-    const condensedData = condenseStockData(rawPrices);
-
-    // 5. Calculate game parameters
-    const gameParams: GameParameters = calculateGameParameters(condensedData);
-
-    // 6. Calculate par performance
-    const parPerformance: ParPerformance = calculateParPerformance(condensedData, gameParams);
-
-    // 7. Prepare challenge data for database
+    // 8. Prepare challenge data for database
     const challengeData: DailyChallengeData = {
       day: nextDay,
       challenge_date: today,
@@ -177,7 +226,7 @@ serve(async (req) => {
       price_data: condensedData
     };
 
-    // 8. Store in database
+    // 9. Store in database
     const { data: insertedChallenge, error: insertError } = await supabase
       .from('daily_challenges')
       .insert(challengeData)
@@ -196,7 +245,11 @@ serve(async (req) => {
         challenge: insertedChallenge,
         day: nextDay,
         stock: selectedStock.symbol,
-        dateRange: `${dateRange.startDate} to ${dateRange.endDate}`
+        dateRange: `${dateRange.startDate} to ${dateRange.endDate}`,
+        attemptsRequired: totalAttempts + 1,
+        targetValue: gameParams.targetValue,
+        startingCash: gameParams.startingCash,
+        targetReturnPercentage: gameParams.targetReturnPercentage
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
