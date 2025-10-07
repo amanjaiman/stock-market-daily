@@ -6,6 +6,7 @@ import {
   trackLeaderboardClicked,
   trackPlayAgainClicked,
 } from "../services/analyticsService";
+import { getEntryForDay } from "../utils/leaderboardStorage";
 
 interface EndGameModalProps {
   isWinner: boolean;
@@ -56,34 +57,42 @@ function EndGameModal({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [onClose]);
 
-  // Calculate player's Profit Per Trade (PPT)
+  // Calculate player's Profit Per Trade (PPT) from current game
   const playerProfitPerTrade =
     playerStats.totalSharesBought > 0
       ? (playerStats.finalValue - gameParameters.startingCash) /
         playerStats.totalSharesBought
       : 0;
 
+  // Get stored data from local storage (best score for the day)
+  const storedEntry = getEntryForDay(day);
+  
+  // Use stored data if available, otherwise fall back to current game props
+  const displayFinalValue = storedEntry?.final_value ?? playerStats.finalValue;
+  const displayAvgBuy = storedEntry?.avg_buy ?? playerStats.averageBuyPrice;
+  const displayPpt = storedEntry?.ppt ?? playerProfitPerTrade;
+  const displayPercentageChange = storedEntry?.percentage_change_of_value ?? 
+    ((playerStats.finalValue - gameParameters.startingCash) / gameParameters.startingCash) * 100;
+
   const generateShareText = (): string => {
     // Compare player performance to par and generate emoji indicators
     const performanceEmojis: string[] = [];
 
     // 1. Average Buy Price Performance (lower is better)
-    if (playerStats.totalSharesBought === 0) {
+    if (displayAvgBuy === 0) {
       performanceEmojis.push("⬛"); // Didn't trade
-    } else if (
-      playerStats.averageBuyPrice <= parPerformance.parAverageBuyPrice
-    ) {
+    } else if (displayAvgBuy <= parPerformance.parAverageBuyPrice) {
       performanceEmojis.push("🟩"); // Better than par
     } else {
       performanceEmojis.push("🟥"); // Worse than par
     }
 
     // 2. Profit Per Trade vs Par (higher PPT is better)
-    if (playerStats.totalSharesBought === 0) {
+    if (displayAvgBuy === 0) {
       performanceEmojis.push("⬛"); // Didn't trade
     } else if (
       isNaN(parPerformance.parProfitPerTrade) ||
-      playerProfitPerTrade >= parPerformance.parProfitPerTrade
+      displayPpt >= parPerformance.parProfitPerTrade
     ) {
       performanceEmojis.push("🟩"); // Better or equal PPT (or par is invalid)
     } else {
@@ -91,37 +100,24 @@ function EndGameModal({
     }
 
     // 3. Target Achievement
-    if (playerStats.finalValue >= gameParameters.targetValue) {
+    if (displayFinalValue >= gameParameters.targetValue) {
       performanceEmojis.push("✅"); // Hit target
     } else {
       performanceEmojis.push("❌"); // Missed target
     }
 
-    // Calculate return percentage
-    const returnPercent =
-      ((playerStats.finalValue - gameParameters.startingCash) /
-        gameParameters.startingCash) *
-      100;
-
     // Build share text
     const shareText = `DayTradle #${day} ${performanceEmojis.join("")}
-Final Value: ${formatCurrency(playerStats.finalValue)} (${
-      returnPercent >= 0 ? "+" : ""
-    }${returnPercent.toFixed(1)}%)${
-      playerStats.totalSharesBought > 0
-        ? `\nPPT: ${formatCurrency(playerProfitPerTrade)}`
-        : ""
+Final Value: ${formatCurrency(displayFinalValue)} (${
+      displayPercentageChange >= 0 ? "+" : ""
+    }${displayPercentageChange.toFixed(1)}%)${
+      displayAvgBuy > 0 ? `\nPPT: ${formatCurrency(displayPpt)}` : ""
     }
 
 Play at daytradle.com`;
 
     return shareText;
   };
-
-  const returnPercent =
-    ((playerStats.finalValue - gameParameters.startingCash) /
-      gameParameters.startingCash) *
-    100;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 animate-in fade-in duration-300">
@@ -210,9 +206,9 @@ Play at daytradle.com`;
             <div className="flex justify-center gap-4 sm:gap-6 mb-4 sm:mb-6">
               <div className="text-center">
                 <div className="text-lg mb-1">
-                  {playerStats.totalSharesBought === 0
+                  {displayAvgBuy === 0
                     ? "⬛"
-                    : playerStats.averageBuyPrice <=
+                    : displayAvgBuy <=
                       parPerformance.parAverageBuyPrice
                     ? "🟩"
                     : "🟥"}
@@ -223,10 +219,10 @@ Play at daytradle.com`;
               </div>
               <div className="text-center">
                 <div className="text-lg mb-1">
-                  {playerStats.totalSharesBought === 0
+                  {displayAvgBuy === 0
                     ? "⬛"
                     : isNaN(parPerformance.parProfitPerTrade) ||
-                      playerProfitPerTrade >= parPerformance.parProfitPerTrade
+                      displayPpt >= parPerformance.parProfitPerTrade
                     ? "🟩"
                     : "🟥"}
                 </div>
@@ -236,7 +232,7 @@ Play at daytradle.com`;
               </div>
               <div className="text-center">
                 <div className="text-lg mb-1">
-                  {playerStats.finalValue >= gameParameters.targetValue
+                  {displayFinalValue >= gameParameters.targetValue
                     ? "✅"
                     : "❌"}
                 </div>
@@ -318,17 +314,17 @@ Play at daytradle.com`;
                       Final Value
                     </p>
                     <p className="text-lg font-bold text-slate-700 dark:text-slate-300">
-                      {formatCurrency(playerStats.finalValue)}
+                      {formatCurrency(displayFinalValue)}
                     </p>
                     <p
                       className={`text-sm font-medium ${
-                        returnPercent >= 0
+                        displayPercentageChange >= 0
                           ? "text-green-600 dark:text-green-400"
                           : "text-orange-600 dark:text-orange-400"
                       }`}
                     >
-                      {returnPercent >= 0 ? "+" : ""}
-                      {returnPercent.toFixed(1)}%
+                      {displayPercentageChange >= 0 ? "+" : ""}
+                      {displayPercentageChange.toFixed(1)}%
                     </p>
                   </div>
                   <div className="text-center">
@@ -340,16 +336,16 @@ Play at daytradle.com`;
                     </p>
                     <p
                       className={`text-sm font-medium ${
-                        isWinner
+                        displayFinalValue >= gameParameters.targetValue
                           ? "text-green-600 dark:text-green-400"
                           : "text-orange-600 dark:text-orange-400"
                       }`}
                     >
-                      {isWinner ? "Hit" : "Missed"}
+                      {displayFinalValue >= gameParameters.targetValue ? "Hit" : "Missed"}
                     </p>
                   </div>
                 </div>
-                {playerStats.totalSharesBought > 0 && (
+                {displayAvgBuy > 0 && (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-6 text-sm">
                       <div className="text-center">
@@ -359,13 +355,13 @@ Play at daytradle.com`;
                         <div className="space-y-1">
                           <p
                             className={`font-medium text-sm ${
-                              playerStats.averageBuyPrice <=
+                              displayAvgBuy <=
                               parPerformance.parAverageBuyPrice
                                 ? "text-green-600 dark:text-green-400"
                                 : "text-orange-600 dark:text-orange-400"
                             }`}
                           >
-                            {formatCurrency(playerStats.averageBuyPrice)}
+                            {formatCurrency(displayAvgBuy)}
                           </p>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
                             Par:{" "}
@@ -381,13 +377,13 @@ Play at daytradle.com`;
                           <p
                             className={`font-medium text-sm ${
                               isNaN(parPerformance.parProfitPerTrade) ||
-                              playerProfitPerTrade >=
+                              displayPpt >=
                                 parPerformance.parProfitPerTrade
                                 ? "text-green-600 dark:text-green-400"
                                 : "text-orange-600 dark:text-orange-400"
                             }`}
                           >
-                            {formatCurrency(playerProfitPerTrade)}
+                            {formatCurrency(displayPpt)}
                           </p>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
                             Par:{" "}
