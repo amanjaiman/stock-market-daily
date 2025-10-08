@@ -42,6 +42,10 @@ export const createLeaderboardEntry = async (
       return null;
     }
 
+    if (!data) {
+      return null;
+    }
+
     return data.id;
   } catch (error) {
     console.error('Exception creating leaderboard entry:', error);
@@ -57,16 +61,22 @@ export const updateLeaderboardEntry = async (
   updates: Partial<LeaderboardEntry>
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('leaderboard')
       .update({
         ...updates,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
     if (error) {
       console.error('Error updating leaderboard entry:', error);
+      return false;
+    }
+    
+    // Check if any rows were actually updated
+    if (!data || data.length === 0) {
       return false;
     }
 

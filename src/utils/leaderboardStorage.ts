@@ -53,6 +53,11 @@ export const saveUserName = async (name: string): Promise<{ success: boolean; er
   // Update localStorage entries with the new name
   const entries = getLeaderboardEntries();
   
+  // Check if there are any entries to sync
+  if (entries.length === 0) {
+    return { success: false, error: "No score found. Please complete a game first." };
+  }
+  
   entries.forEach((entry) => {
     // Update any entry without a name (empty string)
     if (!entry.name || entry.name === "") {
@@ -60,30 +65,29 @@ export const saveUserName = async (name: string): Promise<{ success: boolean; er
     }
   });
   
-  if (entries.length > 0) {
-    localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries));
-    
-    // Now sync with Supabase - either create or update
-    const userUUID = getUserUUID();
-    const currentEntry = entries[0]; // Should only be one entry for current day
-    
-    try {
-      if (userUUID) {
-        // We have a UUID - update existing entry
-        const success = await updateLeaderboardEntry(userUUID, {
-          name: trimmedName,
-          final_value: currentEntry.final_value,
-          percentage_change_of_value: currentEntry.percentage_change_of_value,
-          avg_buy: currentEntry.avg_buy,
-          ppt: currentEntry.ppt,
-          num_tries: currentEntry.num_tries,
-        });
+  localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries));
+  
+  // Now sync with Supabase - either create or update
+  const userUUID = getUserUUID();
+  const currentEntry = entries[0]; // Should only be one entry for current day
+  
+  try {
+    if (userUUID) {
+      // We have a UUID - try to update existing entry
+      const success = await updateLeaderboardEntry(userUUID, {
+        name: trimmedName,
+        final_value: currentEntry.final_value,
+        percentage_change_of_value: currentEntry.percentage_change_of_value,
+        avg_buy: currentEntry.avg_buy,
+        ppt: currentEntry.ppt,
+        num_tries: currentEntry.num_tries,
+      });
+      
+      if (!success) {
+        // Update failed - likely the row doesn't exist (ghost UUID from failed insert)
+        // Clear the invalid UUID and create a new entry
+        localStorage.removeItem(USER_UUID_KEY);
         
-        if (!success) {
-          return { success: false, error: "Failed to update leaderboard. Please try again." };
-        }
-      } else {
-        // No UUID - create new entry in Supabase
         const newUUID = await createLeaderboardEntry({
           day: currentEntry.day,
           name: trimmedName,
@@ -100,10 +104,27 @@ export const saveUserName = async (name: string): Promise<{ success: boolean; er
         
         saveUserUUID(newUUID);
       }
-    } catch (error) {
-      console.error("Error syncing with Supabase:", error);
-      return { success: false, error: "Connection error. Please check your internet and try again." };
+    } else {
+      // No UUID - create new entry in Supabase
+      const newUUID = await createLeaderboardEntry({
+        day: currentEntry.day,
+        name: trimmedName,
+        final_value: currentEntry.final_value,
+        percentage_change_of_value: currentEntry.percentage_change_of_value,
+        avg_buy: currentEntry.avg_buy,
+        ppt: currentEntry.ppt,
+        num_tries: currentEntry.num_tries,
+      });
+      
+      if (!newUUID) {
+        return { success: false, error: "Failed to save to leaderboard. Please try again." };
+      }
+      
+      saveUserUUID(newUUID);
     }
+  } catch (error) {
+    console.error("Error syncing with Supabase:", error);
+    return { success: false, error: "Connection error. Please check your internet and try again." };
   }
   
   return { success: true };
