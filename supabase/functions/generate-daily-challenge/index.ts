@@ -15,7 +15,6 @@ import {
 import { fetchStockData } from "../_shared/stockDataFetcher.ts";
 import { 
   generateRandomDateRange,
-  getDailySeed,
   isValidDateRange,
   getRandomStockWithSeed,
   type DateRange,
@@ -106,7 +105,8 @@ serve(async (req) => {
       throw new Error('No stocks found in database. Please run seed-stocks first.');
     }
 
-    const seed = getDailySeed();
+    // Use timestamp for seed to ensure each generation is unique
+    const seed = Date.now();
     const maxTotalAttempts = 50; // Try up to 50 different stock/date combinations
     let totalAttempts = 0;
     let selectedStock!: any;
