@@ -6,7 +6,6 @@ import {
   trackLeaderboardClicked,
   trackPlayAgainClicked,
 } from "../services/analyticsService";
-import { getEntryForDay } from "../utils/leaderboardStorage";
 
 interface EndGameModalProps {
   isWinner: boolean;
@@ -64,18 +63,14 @@ function EndGameModal({
         playerStats.totalSharesBought
       : 0;
 
-  // Get stored data from local storage (best score for the day)
-  const storedEntry = getEntryForDay(day);
-
-  // Use stored data if available, otherwise fall back to current game props
-  const displayFinalValue = storedEntry?.final_value ?? playerStats.finalValue;
-  const displayAvgBuy = storedEntry?.avg_buy ?? playerStats.averageBuyPrice;
-  const displayPpt = storedEntry?.ppt ?? playerProfitPerTrade;
+  // Always use current game stats (not localStorage) for the EndGameModal
+  const displayFinalValue = playerStats.finalValue;
+  const displayAvgBuy = playerStats.averageBuyPrice;
+  const displayPpt = playerProfitPerTrade;
   const displayPercentageChange =
-    storedEntry?.percentage_change_of_value ??
     ((playerStats.finalValue - gameParameters.startingCash) /
       gameParameters.startingCash) *
-      100;
+    100;
 
   const generateShareText = (): string => {
     // Compare player performance to par and generate emoji indicators
