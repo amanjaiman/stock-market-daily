@@ -67,12 +67,25 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-1 sm:gap-2 justify-end sm:flex-1">
             {/* Leaderboard */}
             <button
-              onClick={() => {
-                trackHeaderLeaderboardClicked();
-                onLeaderboardClick?.();
-              }}
-              className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200 group"
-              title="Leaderboard"
+              onClick={
+                gameState !== "active"
+                  ? () => {
+                      trackHeaderLeaderboardClicked();
+                      onLeaderboardClick?.();
+                    }
+                  : undefined
+              }
+              className={`p-1.5 sm:p-2 rounded-lg transition-colors duration-200 group ${
+                gameState !== "active"
+                  ? "hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                  : "cursor-not-allowed opacity-50"
+              }`}
+              title={
+                gameState !== "active"
+                  ? "Leaderboard"
+                  : "Finish the game to view leaderboard"
+              }
+              disabled={gameState === "active"}
             >
               <svg
                 className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors"
