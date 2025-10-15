@@ -6,6 +6,7 @@ import {
   trackLeaderboardClicked,
   trackPlayAgainClicked,
 } from "../services/analyticsService";
+import { getEntryForDay } from "../utils/leaderboardStorage";
 
 interface EndGameModalProps {
   isWinner: boolean;
@@ -26,6 +27,7 @@ interface EndGameModalProps {
   onPlayAgain: () => void;
   onLeaderboardClick: () => void;
   formatCurrency: (amount: number) => string;
+  useStoredResults?: boolean; // If true, load from localStorage instead of props
 }
 
 function EndGameModal({
@@ -40,6 +42,7 @@ function EndGameModal({
   onPlayAgain,
   onLeaderboardClick,
   formatCurrency,
+  useStoredResults = false,
 }: EndGameModalProps) {
   const [copySuccess, setCopySuccess] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
@@ -63,14 +66,18 @@ function EndGameModal({
         playerStats.totalSharesBought
       : 0;
 
-  // Always use current game stats (not localStorage) for the EndGameModal
-  const displayFinalValue = playerStats.finalValue;
-  const displayAvgBuy = playerStats.averageBuyPrice;
-  const displayPpt = playerProfitPerTrade;
+  // Get stored data from local storage if requested (for viewing previous results)
+  const storedEntry = useStoredResults ? getEntryForDay(day) : null;
+
+  // Use stored data if useStoredResults is true and data exists, otherwise use current game stats
+  const displayFinalValue = storedEntry?.final_value ?? playerStats.finalValue;
+  const displayAvgBuy = storedEntry?.avg_buy ?? playerStats.averageBuyPrice;
+  const displayPpt = storedEntry?.ppt ?? playerProfitPerTrade;
   const displayPercentageChange =
+    storedEntry?.percentage_change_of_value ??
     ((playerStats.finalValue - gameParameters.startingCash) /
       gameParameters.startingCash) *
-    100;
+      100;
 
   const generateShareText = (): string => {
     // Compare player performance to par and generate emoji indicators

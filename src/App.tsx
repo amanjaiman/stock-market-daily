@@ -1309,6 +1309,7 @@ function App() {
           onPlayAgain={playAgain}
           onLeaderboardClick={handleLeaderboardModalClick}
           formatCurrency={formatCurrency}
+          useStoredResults={gameState !== "ended"}
         />
       )}
 
