@@ -46,6 +46,7 @@ function EndGameModal({
 }: EndGameModalProps) {
   const [copySuccess, setCopySuccess] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [timeUntilNextGame, setTimeUntilNextGame] = useState("");
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -58,6 +59,37 @@ function EndGameModal({
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [onClose]);
+
+  // Calculate time until next game (midnight UTC)
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const midnight = new Date();
+      midnight.setUTCHours(24, 0, 0, 0); // Next midnight UTC
+
+      const diff = midnight.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        setTimeUntilNextGame("00:00:00");
+        return;
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setTimeUntilNextGame(
+        `${hours.toString().padStart(2, "0")}:${minutes
+          .toString()
+          .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
+      );
+    };
+
+    updateCountdown(); // Initial call
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Calculate player's Profit Per Trade (PPT) from current game
   const playerProfitPerTrade =
@@ -258,8 +290,8 @@ Play at daytradle.com`;
                 }}
                 className={`font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-3xl floating-button bounce-click transition-all duration-200 text-sm sm:text-base ${
                   copySuccess
-                    ? "bg-green-500 text-white"
-                    : "bg-slate-600 hover:bg-slate-700 text-white"
+                    ? "bg-green-600 text-white"
+                    : "bg-green-500 hover:bg-green-600 text-white"
                 }`}
               >
                 {copySuccess ? "Copied!" : "Copy"}
@@ -274,6 +306,18 @@ Play at daytradle.com`;
               >
                 Leaderboard
               </button>
+            </div>
+          </div>
+
+          {/* Next Game Countdown */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-6">
+            <div className="text-center">
+              <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base mb-2 font-semibold">
+                New stock in
+              </p>
+              <p className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-200 font-mono">
+                {timeUntilNextGame || "00:00:00"}
+              </p>
             </div>
           </div>
 
